@@ -1,18 +1,29 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Search, ShoppingCart, Menu, X, User } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Search, ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { totalItems } = useCart();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Toggle mobile menu
   const toggleMobileMenu = () => {
@@ -44,6 +55,11 @@ const Navbar = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location]);
+
+  // Handle logout
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <header
@@ -92,6 +108,16 @@ const Navbar = () => {
             >
               Kontak
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === "/admin" ? "text-primary" : "text-foreground"
+                }`}
+              >
+                Admin
+              </Link>
+            )}
           </nav>
 
           {/* Desktop Right Icons */}
@@ -113,14 +139,45 @@ const Navbar = () => {
                 </span>
               )}
             </Link>
-            <Link to="/login">
-              <Button variant="outline" size="sm">
-                Masuk
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm">Daftar</Button>
-            </Link>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>{profile?.full_name || profile?.email}</span>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/admin")}>
+                      <span>Dashboard Admin</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Keluar</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="outline" size="sm">
+                    Masuk
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm">Daftar</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -210,17 +267,40 @@ const Navbar = () => {
                 >
                   Kontak
                 </Link>
-                <div className="pt-2 border-t flex flex-col space-y-2">
+                {isAdmin && (
                   <Link
-                    to="/login"
+                    to="/admin"
                     className="flex items-center py-2 text-foreground hover:text-primary"
                   >
-                    <User size={18} className="mr-2" />
-                    Masuk
+                    Admin
                   </Link>
-                  <Link to="/register">
-                    <Button className="w-full">Daftar</Button>
-                  </Link>
+                )}
+                <div className="pt-2 border-t flex flex-col space-y-2">
+                  {user ? (
+                    <>
+                      <div className="flex items-center py-2 text-foreground">
+                        <User size={18} className="mr-2" />
+                        <span>{profile?.full_name || profile?.email}</span>
+                      </div>
+                      <Button onClick={handleLogout} variant="destructive" className="w-full">
+                        <LogOut size={18} className="mr-2" />
+                        Keluar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/login"
+                        className="flex items-center py-2 text-foreground hover:text-primary"
+                      >
+                        <User size={18} className="mr-2" />
+                        Masuk
+                      </Link>
+                      <Link to="/register">
+                        <Button className="w-full">Daftar</Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </nav>
             </div>

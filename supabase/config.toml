@@ -1,1 +1,4 @@
+
 project_id = "ocyucupwnmxrpjwhnjmv"
+[functions.make-admin]
+verify_jwt = true

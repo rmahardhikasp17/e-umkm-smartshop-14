@@ -1,220 +1,386 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, ShoppingCart, Trash, Plus, Minus, ShoppingBag, AlertCircle } from "lucide-react";
+import React from "react";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { formatPrice } from "@/utils/data";
+import { Trash2, ShoppingBag, AlertCircle, Plus, Minus } from "lucide-react";
+import { toast } from "sonner";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import PageTransition from "../components/transitions/PageTransition";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useCart } from "../contexts/CartContext";
-import { formatPrice } from "../utils/data";
-import { toast } from "sonner";
+
+// Checkout form schema
+const checkoutFormSchema = z.object({
+  name: z.string().min(3, "Nama minimal 3 karakter"),
+  email: z.string().email("Email tidak valid"),
+  phone: z.string().min(10, "Nomor telepon minimal 10 digit"),
+  address: z.string().min(10, "Alamat minimal 10 karakter"),
+  paymentMethod: z.string().min(1, "Pilih metode pembayaran"),
+  notes: z.string().optional(),
+});
+
+type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, clearCart, totalPrice } = useCart();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
+  const [isProcessing, setIsProcessing] = React.useState(false);
 
-  const handleCheckout = () => {
-    if (items.length === 0) {
-      toast.error("Keranjang belanja Anda kosong");
+  // Initialize form
+  const form = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutFormSchema),
+    defaultValues: {
+      name: "",
+      email: user?.email || "",
+      phone: "",
+      address: "",
+      paymentMethod: "",
+      notes: "",
+    },
+  });
+
+  // Update form when user changes
+  React.useEffect(() => {
+    if (user?.email) {
+      form.setValue("email", user.email);
+    }
+  }, [user, form]);
+
+  const onCheckout = () => {
+    if (!user) {
+      toast.error("Anda harus login terlebih dahulu untuk melanjutkan checkout");
+      navigate("/login");
       return;
     }
+    setIsCheckoutOpen(true);
+  };
 
+  const onSubmitCheckout = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     
-    // Simulate API call for processing order
-    setTimeout(() => {
-      toast.success("Pesanan berhasil dibuat! Mengarahkan ke halaman pembayaran...");
+    try {
+      // For each item in the cart, create a transaction
+      for (const item of items) {
+        const { data: transactionData, error } = await supabase
+          .from("transactions")
+          .insert({
+            user_id: user?.id,
+            product_id: item.id,
+            quantity: item.quantity,
+            total_price: item.price * item.quantity,
+            status: "Menunggu Pembayaran"
+          });
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      // Success
+      toast.success("Pesanan berhasil dibuat!");
+      setIsCheckoutOpen(false);
       clearCart();
-      
-      // In a real app, would redirect to checkout/payment page
-      setTimeout(() => {
-        setIsProcessing(false);
-        window.location.href = "/";
-      }, 1500);
-    }, 2000);
+      navigate("/");
+    } catch (error) {
+      console.error("Error processing checkout:", error);
+      toast.error("Terjadi kesalahan saat memproses pesanan");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <PageTransition>
-      <div className="min-h-screen">
-        <Navbar />
-        <main className="pt-24 pb-16 container px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold">Keranjang Belanja</h1>
-              <Link
-                to="/"
-                className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center"
-              >
-                <ArrowLeft size={16} className="mr-1" />
-                <span>Lanjut Belanja</span>
-              </Link>
-            </div>
-
-            {items.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-16 bg-background rounded-xl border"
-              >
-                <ShoppingCart
-                  size={64}
-                  className="mx-auto text-muted-foreground/50 mb-4"
-                />
-                <h2 className="text-xl font-semibold mb-2">Keranjang Anda Kosong</h2>
-                <p className="text-muted-foreground mb-6">
-                  Sepertinya Anda belum menambahkan produk ke keranjang.
-                </p>
-                <Button asChild>
-                  <Link to="/">Mulai Belanja</Link>
-                </Button>
-              </motion.div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2">
-                  <div className="bg-white rounded-xl overflow-hidden shadow-subtle">
-                    <div className="p-4 border-b">
-                      <div className="flex justify-between items-center">
-                        <h2 className="font-medium">
-                          Item dalam Keranjang ({items.length})
-                        </h2>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={clearCart}
-                        >
-                          <Trash size={14} className="mr-1" />
-                          Kosongkan
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="divide-y">
-                      {items.map((item, index) => (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="p-4 flex gap-4"
-                        >
-                          <div className="w-20 h-20 rounded-md overflow-hidden shrink-0">
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <Link
-                              to={`/product/${item.id}`}
-                              className="font-medium text-foreground hover:text-primary transition-colors line-clamp-1"
-                            >
-                              {item.name}
-                            </Link>
-                            
-                            <div className="text-sm text-muted-foreground mb-2">
-                              {formatPrice(item.price)}
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center border rounded overflow-hidden">
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                  className="px-2 py-1 text-foreground hover:bg-secondary transition-colors"
-                                >
-                                  <Minus size={14} />
-                                </button>
-                                <input
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => 
-                                    updateQuantity(item.id, parseInt(e.target.value) || 1)
-                                  }
-                                  className="w-10 text-center border-0 focus:ring-0 text-sm py-1"
-                                  min="1"
-                                  max={item.stock}
-                                />
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                  className="px-2 py-1 text-foreground hover:bg-secondary transition-colors"
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </div>
-                              
-                              <button
-                                onClick={() => removeFromCart(item.id)}
-                                className="text-muted-foreground hover:text-destructive transition-colors"
-                              >
-                                <Trash size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-1">
-                  <div className="bg-white rounded-xl shadow-subtle p-4 sticky top-24">
-                    <h2 className="font-medium mb-4">Ringkasan Pesanan</h2>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>{formatPrice(totalPrice)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Pengiriman</span>
-                        <span>Dihitung saat checkout</span>
-                      </div>
-                    </div>
-                    
-                    <div className="border-t pt-2 mb-4">
-                      <div className="flex justify-between font-medium">
-                        <span>Total</span>
-                        <span>{formatPrice(totalPrice)}</span>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handleCheckout}
-                      disabled={isProcessing || items.length === 0}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Memproses...
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="mr-2" size={16} />
-                          Checkout
-                        </>
-                      )}
-                    </Button>
-                    
-                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded text-sm flex">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5 mr-2" />
-                      <p>
-                        Produk ini merupakan produk asli dari UMKM lokal. Dengan berbelanja, Anda mendukung pengrajin dan produsen lokal Indonesia.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+      <Navbar />
+      <div className="container py-12">
+        <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
+        
+        {items.length === 0 ? (
+          <div className="text-center py-16 bg-secondary/30 rounded-lg">
+            <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-medium mb-2">Keranjang Belanja Kosong</h2>
+            <p className="text-muted-foreground mb-6">
+              Anda belum menambahkan produk ke keranjang belanja
+            </p>
+            <Link to="/products">
+              <Button>
+                Lihat Produk
+              </Button>
+            </Link>
           </div>
-        </main>
-        <Footer />
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Produk</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Harga</TableHead>
+                      <TableHead>Jumlah</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <img 
+                            src={item.image} 
+                            alt={item.name} 
+                            className="w-16 h-16 object-cover rounded" 
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>{formatPrice(item.price)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={item.quantity >= item.stock}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatPrice(item.price * item.quantity)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFromCart(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ringkasan Pesanan</CardTitle>
+                  <CardDescription>
+                    Periksa pesanan Anda sebelum checkout
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatPrice(totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pengiriman</span>
+                    <span>Gratis</span>
+                  </div>
+                  <div className="border-t pt-4 flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>{formatPrice(totalPrice)}</span>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex-col space-y-2">
+                  <Button className="w-full" onClick={onCheckout}>
+                    Checkout
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={clearCart}
+                  >
+                    Kosongkan Keranjang
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
+        )}
+        
+        {/* Checkout Dialog */}
+        <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Checkout Pesanan</DialogTitle>
+              <DialogDescription>
+                Masukkan informasi pengiriman dan pembayaran
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitCheckout)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Lengkap</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Masukkan nama lengkap" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="email@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nomor Telepon</FormLabel>
+                      <FormControl>
+                        <Input placeholder="081234567890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Alamat Pengiriman</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Masukkan alamat lengkap" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Metode Pembayaran</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih metode pembayaran" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="bank_transfer">Transfer Bank</SelectItem>
+                          <SelectItem value="e_wallet">E-Wallet</SelectItem>
+                          <SelectItem value="cod">Bayar di Tempat (COD)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Catatan (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Tambahkan catatan untuk pesanan Anda" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex items-center p-3 rounded-md bg-primary/10 mb-4">
+                  <AlertCircle className="h-5 w-5 text-primary mr-2" />
+                  <p className="text-sm">
+                    Total pembayaran: <strong>{formatPrice(totalPrice)}</strong>
+                  </p>
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={isProcessing}>
+                    {isProcessing ? "Memproses..." : "Konfirmasi Pesanan"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageTransition>
   );
