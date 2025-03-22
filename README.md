@@ -1,69 +1,95 @@
-# Welcome to your Lovable project
+# E-UMKM
 
-## Project info
+E-UMKM adalah platform berbasis web yang dirancang untuk membantu Usaha Mikro, Kecil, dan Menengah (UMKM) dalam menjual produk mereka secara online. Platform ini menyediakan berbagai fitur untuk mempermudah pengelolaan bisnis UMKM, termasuk manajemen produk, sistem transaksi online, AI rekomendasi, dan dashboard admin.
 
-**URL**: https://lovable.dev/projects/bd5a4f7c-f8ad-4dd7-a47d-7fba2a8633ed
+## 🎯 Tujuan Website E-UMKM
+E-UMKM bertujuan untuk menjadi solusi digital bagi pelaku usaha kecil agar lebih mudah dan efisien dalam menjual produk mereka. Beberapa fitur utama yang ditawarkan antara lain:
 
-## How can I edit this code?
+- **Manajemen Produk** – Memungkinkan admin untuk mengelola produk di marketplace.
+- **Sistem Transaksi Online** – Pengguna dapat membeli produk langsung melalui website.
+- **AI Rekomendasi untuk UMKM** – Memberikan saran tentang stok, optimasi harga, dan tren produk.
+- **Dashboard Admin** – Menampilkan analisis performa penjualan dan data pelanggan.
 
-There are several ways of editing your application.
+## 🚀 Fitur Utama
 
-**Use Lovable**
+### 1. Halaman Utama (Landing Page)
+- Tampilan modern dan responsif yang menampilkan produk unggulan.
+- Informasi tentang UMKM dan manfaat menggunakan platform ini.
+- Navigasi intuitif untuk eksplorasi kategori produk.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/bd5a4f7c-f8ad-4dd7-a47d-7fba2a8633ed) and start prompting.
+### 2. Halaman Produk
+- Menampilkan daftar produk dari berbagai UMKM.
+- Sistem filter dan pencarian berdasarkan kategori atau harga.
+- Deskripsi produk yang lengkap dengan gambar, harga, dan tombol "Tambah ke Keranjang".
 
-Changes made via Lovable will be committed automatically to this repo.
+### 3. Sistem Login dan Autentikasi
+- User dapat mendaftar dan login untuk melakukan pembelian.
+- Admin memiliki akses ke dashboard untuk mengelola produk, pesanan, dan laporan.
+- User biasa tidak memiliki akses ke fitur admin.
 
-**Use your preferred IDE**
+### 4. Dashboard Admin
+- Menampilkan **Total Penjualan, Total Pesanan, Produk Terjual, dan Pelanggan Baru** berdasarkan data dari Supabase.
+- Rekomendasi AI untuk membantu admin dalam mengoptimalkan stok, menentukan harga, dan mengikuti tren pasar.
+- Data **Pesanan Terbaru** yang diambil langsung dari tabel `transactions`.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 5. Sistem Checkout & Transaksi
+- **User harus login sebelum melakukan transaksi.**
+- Sistem pemesanan mencatat detail pembelian pengguna.
+- Metode pembayaran akan dikembangkan lebih lanjut.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 6. Manajemen Produk
+- Admin dapat menambah, mengedit, dan menghapus produk.
+- Data produk diambil dari Supabase untuk integrasi database yang lebih optimal.
+- Potensi pengembangan integrasi dengan sistem dropshipping atau afiliasi di masa depan.
 
-Follow these steps:
+## 🛠 Teknologi yang Digunakan
+
+| Teknologi  | Keterangan |
+|------------|-----------|
+| **Front-End** | React.js (berbasis Vite) |
+| **Back-End** | Supabase (alternatif Firebase) |
+| **Database** | PostgreSQL di Supabase |
+| **Hosting** | Vercel |
+| **UI Design** | ShadCN UI & Tailwind CSS |
+
+---
+
+## 💻 Pengaturan dan Instalasi Lokal
+
+Jika ingin mengembangkan secara lokal menggunakan IDE pilihanmu, ikuti langkah-langkah berikut:
+
+### **Clone Repository dan Setup Proyek**
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# 1. Clone repository ini
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# 2. Masuk ke direktori proyek
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
+# 3. Install dependencies
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Jalankan server development
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### **Edit File Langsung di GitHub**
+- Masuk ke file yang ingin diedit.
+- Klik ikon "Edit" (pensil) di kanan atas tampilan file.
+- Lakukan perubahan dan commit langsung.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### **Gunakan GitHub Codespaces**
+- Masuk ke halaman utama repository.
+- Klik tombol "Code" (hijau) di kanan atas.
+- Pilih tab "Codespaces".
+- Klik "New codespace" untuk menjalankan lingkungan development di dalam GitHub.
+- Edit file langsung dan push perubahan setelah selesai.
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🔗 Link Website
+Akses E-UMKM melalui: [E-UMKM](https://e-umkm.vercel.app/)
+---
 
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/bd5a4f7c-f8ad-4dd7-a47d-7fba2a8633ed) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Dengan berbagai fitur yang dimilikinya, E-UMKM siap menjadi solusi bagi pelaku usaha kecil dalam mengelola bisnis mereka secara digital. 🚀
