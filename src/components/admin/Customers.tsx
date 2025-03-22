@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -25,15 +24,9 @@ import {
 } from "@/components/ui/dialog";
 import { formatPrice } from "@/utils/data";
 
-// Define user type based on Supabase table
-type User = {
-  id: string;
-  email: string;
-  role: string;
-  created_at: string | null;
-  transactions?: Transaction[];
-  total_spent?: number;
-  order_count?: number;
+// Define types based on Supabase tables
+type Product = {
+  name: string;
 };
 
 type Transaction = {
@@ -43,9 +36,17 @@ type Transaction = {
   total_price: number;
   status: string;
   created_at: string | null;
-  product?: {
-    name: string;
-  };
+  product?: Product;
+};
+
+type User = {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string | null;
+  transactions?: Transaction[];
+  total_spent?: number;
+  order_count?: number;
 };
 
 const Customers = () => {
@@ -77,7 +78,7 @@ const Customers = () => {
             .from("transactions")
             .select(`
               *,
-              product:product_id (name)
+              product:products (name)
             `)
             .eq("user_id", user.id);
 

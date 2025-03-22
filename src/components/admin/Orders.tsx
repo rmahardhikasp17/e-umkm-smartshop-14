@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +25,15 @@ import {
 } from "@/components/ui/pagination";
 
 // Define transaction type based on Supabase table
+type Product = {
+  name: string;
+  image_url: string | null;
+};
+
+type User = {
+  email: string;
+};
+
 type Transaction = {
   id: string;
   product_id: string | null;
@@ -34,13 +42,8 @@ type Transaction = {
   status: string;
   user_id: string | null;
   created_at: string | null;
-  product?: {
-    name: string;
-    image_url: string | null;
-  };
-  user?: {
-    email: string;
-  };
+  product?: Product;
+  user?: User;
 };
 
 const statusColors = {
@@ -68,13 +71,8 @@ const Orders = () => {
         .from("transactions")
         .select(`
           *,
-          product:product_id (
-            name,
-            image_url
-          ),
-          user:user_id (
-            email
-          )
+          product:products(name, image_url),
+          user:users(email)
         `)
         .order("created_at", { ascending: false });
 
