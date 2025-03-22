@@ -4,43 +4,96 @@ import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Truck, ArrowLeft, Minus, Plus, Calendar, ShoppingCart, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import PageTransition from "../components/transitions/PageTransition";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import ProductCard from "../components/ProductCard";
-import { Product, products, formatPrice } from "../utils/data";
+import { Product, dummyProducts, formatPrice } from "../utils/data";
 import { useCart } from "../contexts/CartContext";
 import { toast } from "sonner";
+
+// Interface for Supabase product data
+interface SupabaseProduct {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  description: string | null;
+  image_url: string | null;
+  created_at: string | null;
+  category?: string;
+  rating?: number;
+}
+
+// Convert Supabase product to our frontend product format
+const mapToProductFormat = (product: SupabaseProduct): Product => {
+  return {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    description: product.description || "",
+    image: product.image_url || "https://images.unsplash.com/photo-1635208430486-19602a252a93?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    category: product.category || "Uncategorized",
+    stock: product.stock,
+    rating: product.rating || 4.5,
+  };
+};
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState("description");
   const { addToCart } = useCart();
 
-  useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    window.scrollTo(0, 0);
+  // Fetch product details from Supabase
+  const { data: supabaseProducts, isLoading, error } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*");
 
-    setTimeout(() => {
-      const foundProduct = products.find(p => p.id === id);
+      if (error) throw error;
+      return data as SupabaseProduct[];
+    },
+  });
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    
+    if (supabaseProducts && id) {
+      const mappedProducts = supabaseProducts.map(mapToProductFormat);
+      const foundProduct = mappedProducts.find(p => p.id === id);
+      
       if (foundProduct) {
         setProduct(foundProduct);
         setQuantity(1);
         
         // Find related products from the same category
-        const related = products
+        const related = mappedProducts
           .filter(p => p.category === foundProduct.category && p.id !== foundProduct.id)
           .slice(0, 4);
         setRelatedProducts(related);
+      } else {
+        // Try finding in dummyProducts as fallback
+        const dummyProduct = dummyProducts.find(p => p.id === id);
+        if (dummyProduct) {
+          setProduct(dummyProduct);
+          setQuantity(1);
+          
+          // Find related dummy products
+          const relatedDummy = dummyProducts
+            .filter(p => p.category === dummyProduct.category && p.id !== dummyProduct.id)
+            .slice(0, 4);
+          setRelatedProducts(relatedDummy);
+        }
       }
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    }
+  }, [id, supabaseProducts]);
 
   const handleQuantityChange = (value: number) => {
     if (!product) return;
@@ -72,7 +125,7 @@ const ProductDetail = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen">
         <Navbar />
@@ -95,7 +148,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="min-h-screen">
         <Navbar />
