@@ -32,6 +32,25 @@ type Transaction = {
   user?: User;
 };
 
+// Define additional types for statistics and recommendations
+interface ProductSale {
+  name: string;
+  salesCount: number;
+  totalRevenue: number;
+  price: number;
+}
+
+interface ProductTrend {
+  name: string;
+  count: number;
+}
+
+interface Recommendation {
+  title: string;
+  description: string;
+  action: string;
+}
+
 // Status colors mapping
 const statusColors = {
   "Dikirim": "bg-green-500",
@@ -193,7 +212,7 @@ const Dashboard = () => {
       .sort((a, b) => a.stock - b.stock);
     
     // Price optimization recommendation
-    const productSales = {};
+    const productSales: Record<string, ProductSale> = {};
     transactions.forEach(t => {
       if (t.product && t.product_id) {
         if (!productSales[t.product_id]) {
@@ -222,7 +241,7 @@ const Dashboard = () => {
         return transactionDate >= twoWeeksAgo;
       });
 
-    const productTrends = {};
+    const productTrends: Record<string, ProductTrend> = {};
     recentTransactions.forEach(t => {
       if (t.product_id) {
         if (!productTrends[t.product_id]) {
