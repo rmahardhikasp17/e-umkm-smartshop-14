@@ -3,8 +3,20 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Star, ShoppingCart, Eye } from "lucide-react";
-import { Product, formatPrice } from "../utils/data";
+import { formatPrice } from "../utils/data";
 import { useCart } from "../contexts/CartContext";
+
+// Define the product type
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  category: string;
+  stock: number;
+  rating: number;
+}
 
 interface ProductCardProps {
   product: Product;

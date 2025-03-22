@@ -1,141 +1,151 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { ShoppingCart, User, Menu, X, Search } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../contexts/CartContext";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-const Navbar: React.FC = () => {
+const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const location = useLocation();
   const { totalItems } = useCart();
+  const location = useLocation();
 
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  // Toggle search
+  const toggleSearch = () => {
+    setIsSearchOpen(!isSearchOpen);
+  };
+
+  // Check if navbar should be scrolled
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsSearchOpen(false);
   }, [location]);
-
-  const navLinks = [
-    { name: "Beranda", path: "/" },
-    { name: "Produk", path: "/products" },
-    { name: "Tentang Kami", path: "/about" },
-    { name: "Kontak", path: "/contact" },
-  ];
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/80 backdrop-blur-md py-3 shadow-subtle"
-          : "bg-transparent py-5"
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled ? "bg-white shadow-md py-2" : "bg-transparent py-4"
       }`}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link
-            to="/"
-            className="text-2xl font-bold text-primary flex items-center"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              E-UMKM
-            </motion.div>
+          <Link to="/" className="flex items-center">
+            <h1 className="text-xl font-bold text-primary">E-UMKM</h1>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  location.pathname === link.path
-                    ? "text-primary"
-                    : "text-foreground/80 hover:text-primary hover:bg-primary/5"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              to="/"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location.pathname === "/" ? "text-primary" : "text-foreground"
+              }`}
+            >
+              Beranda
+            </Link>
+            <Link
+              to="/products"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location.pathname === "/products" ? "text-primary" : "text-foreground"
+              }`}
+            >
+              Produk
+            </Link>
+            <Link
+              to="/about"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location.pathname === "/about" ? "text-primary" : "text-foreground"
+              }`}
+            >
+              Tentang
+            </Link>
+            <Link
+              to="/contact"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location.pathname === "/contact" ? "text-primary" : "text-foreground"
+              }`}
+            >
+              Kontak
+            </Link>
+          </nav>
 
-          {/* Search and Actions */}
-          <div className="hidden md:flex items-center space-x-2">
-            <motion.button
-              className="p-2.5 rounded-full text-foreground/70 hover:text-primary hover:bg-primary/5 transition-colors"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          {/* Desktop Right Icons */}
+          <div className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={toggleSearch}
+              className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
               <Search size={20} />
-            </motion.button>
-
-            <Link to="/cart">
-              <motion.div
-                className="p-2.5 rounded-full text-foreground/70 hover:text-primary hover:bg-primary/5 transition-colors relative"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <ShoppingCart size={20} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
-              </motion.div>
+            </button>
+            <Link
+              to="/cart"
+              className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
+            >
+              <ShoppingCart size={20} />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
             </Link>
-
-            <Link to="/admin">
-              <motion.div
-                className="p-2.5 rounded-full text-foreground/70 hover:text-primary hover:bg-primary/5 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <User size={20} />
-              </motion.div>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                Masuk
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button size="sm">Daftar</Button>
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center space-x-3 md:hidden">
-            <Link to="/cart">
-              <div className="p-2 rounded-full text-foreground/70 hover:text-primary relative">
-                <ShoppingCart size={20} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
-              </div>
+          <div className="flex items-center space-x-4 md:hidden">
+            <Link
+              to="/cart"
+              className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
+            >
+              <ShoppingCart size={20} />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
             </Link>
-            
             <button
-              className="p-2 rounded-full text-foreground/70 hover:text-primary"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={toggleMobileMenu}
+              className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
-        </nav>
+        </div>
 
-        {/* Search Bar */}
+        {/* Search Input (Expanded) */}
         <AnimatePresence>
           {isSearchOpen && (
             <motion.div
@@ -143,21 +153,21 @@ const Navbar: React.FC = () => {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="mt-3 overflow-hidden"
+              className="mt-4"
             >
-              <div className="py-2">
-                <div className="relative">
-                  <Search
-                    size={18}
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Cari produk..."
-                    className="pl-10 pr-4 py-2 w-full bg-secondary"
-                    autoFocus
-                  />
-                </div>
+              <div className="relative">
+                <Input
+                  type="search"
+                  placeholder="Cari produk..."
+                  className="w-full pr-10"
+                  autoFocus
+                />
+                <button
+                  onClick={toggleSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </motion.div>
           )}
@@ -168,50 +178,51 @@ const Navbar: React.FC = () => {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden bg-background border-b"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="md:hidden bg-white border-b"
           >
-            <div className="container mx-auto px-4 py-3">
-              <div className="space-y-1">
-                {navLinks.map((link) => (
+            <div className="container mx-auto px-4 py-4">
+              <nav className="flex flex-col space-y-4">
+                <Link
+                  to="/"
+                  className="flex items-center py-2 text-foreground hover:text-primary"
+                >
+                  Beranda
+                </Link>
+                <Link
+                  to="/products"
+                  className="flex items-center py-2 text-foreground hover:text-primary"
+                >
+                  Produk
+                </Link>
+                <Link
+                  to="/about"
+                  className="flex items-center py-2 text-foreground hover:text-primary"
+                >
+                  Tentang
+                </Link>
+                <Link
+                  to="/contact"
+                  className="flex items-center py-2 text-foreground hover:text-primary"
+                >
+                  Kontak
+                </Link>
+                <div className="pt-2 border-t flex flex-col space-y-2">
                   <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`block px-3 py-2.5 rounded-md text-base font-medium transition-colors ${
-                      location.pathname === link.path
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground hover:bg-primary/5 hover:text-primary"
-                    }`}
+                    to="/login"
+                    className="flex items-center py-2 text-foreground hover:text-primary"
                   >
-                    {link.name}
+                    <User size={18} className="mr-2" />
+                    Masuk
                   </Link>
-                ))}
-                <div className="pt-2">
-                  <Link
-                    to="/admin"
-                    className="block px-3 py-2.5 rounded-md text-base font-medium text-foreground hover:bg-primary/5 hover:text-primary"
-                  >
-                    Admin Dashboard
+                  <Link to="/register">
+                    <Button className="w-full">Daftar</Button>
                   </Link>
                 </div>
-                
-                <div className="pt-2 pb-1">
-                  <div className="relative">
-                    <Search
-                      size={18}
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                      type="text"
-                      placeholder="Cari produk..."
-                      className="pl-10 pr-4 py-2 w-full bg-secondary"
-                    />
-                  </div>
-                </div>
-              </div>
+              </nav>
             </div>
           </motion.div>
         )}
