@@ -88,13 +88,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
-      } else if (data) {
+      } else if (data && data.length > 0) {
         console.log("Profile retrieved:", data);
+        // Fix: Access the first item in the array returned from the RPC function
+        const profileData = data[0];
         const userProfile: UserProfile = {
-          id: data.id,
-          email: data.email,
-          role: data.role,
-          full_name: data.full_name
+          id: profileData.id,
+          email: profileData.email,
+          role: profileData.role,
+          full_name: profileData.full_name
         };
         setProfile(userProfile);
       } else {
