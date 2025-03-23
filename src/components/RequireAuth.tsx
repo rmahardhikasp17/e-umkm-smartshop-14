@@ -3,6 +3,7 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -13,9 +14,14 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  // While checking authentication status, show nothing
+  // While checking authentication status, show loading spinner
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Memuat...</span>
+      </div>
+    );
   }
 
   // If not logged in, redirect to login with return path

@@ -45,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state changed:", event);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -58,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("Retrieved existing session:", session ? "Yes" : "No");
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -76,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -86,10 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Error fetching profile:", error);
         setProfile(null);
       } else {
+        console.log("Profile retrieved:", data);
         setProfile(data as UserProfile);
       }
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("Exception fetching profile:", error);
       setProfile(null);
     }
   };
@@ -97,24 +101,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Signing in user:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        toast.error(error.message);
+        console.error("Sign in error:", error.message);
+        toast.error(error.message || "Login gagal. Silakan periksa email dan password Anda.");
         return { error };
       }
 
       if (data.user) {
+        console.log("User signed in successfully:", data.user.id);
         await fetchProfile(data.user.id);
-        toast.success("Berhasil masuk!");
-        navigate("/");
       }
 
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Exception during sign in:", error);
       toast.error("Terjadi kesalahan saat login");
       return { error };
     }
@@ -123,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      console.log("Signing up new user:", email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -134,13 +141,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        toast.error(error.message);
+        console.error("Sign up error:", error.message);
+        toast.error(error.message || "Registrasi gagal. Silakan coba lagi.");
         return { error };
       }
 
       toast.success("Berhasil mendaftar! Silahkan cek email Anda untuk verifikasi.");
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Exception during sign up:", error);
       toast.error("Terjadi kesalahan saat registrasi");
       return { error };
     }
@@ -149,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign out
   const signOut = async () => {
     try {
+      console.log("Signing out user");
       await supabase.auth.signOut();
       toast.info("Berhasil keluar");
       navigate("/");
