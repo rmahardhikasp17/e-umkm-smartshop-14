@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -68,14 +67,10 @@ const Login = () => {
       toast.success("Login berhasil!");
       
       if (data.isAdmin) {
-        // Check if user is actually an admin
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", (await supabase.auth.getUser()).data.user?.id)
-          .single();
-          
-        if (profile?.role !== "admin") {
+        // Check if user is actually an admin using the RPC function
+        const { data: isAdminResult } = await supabase.rpc('is_admin');
+        
+        if (!isAdminResult) {
           toast.error("Anda tidak memiliki hak akses admin");
           return;
         }
