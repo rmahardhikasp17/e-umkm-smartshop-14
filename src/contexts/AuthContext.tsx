@@ -76,17 +76,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
+      // Use the get_profile_by_id function instead of direct table query
       const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+        .rpc('get_profile_by_id', { user_id: userId });
 
       if (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
+      } else if (data && data.length > 0) {
+        setProfile(data[0] as UserProfile);
       } else {
-        setProfile(data as UserProfile);
+        setProfile(null);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
