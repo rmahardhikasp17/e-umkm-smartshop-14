@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -165,15 +164,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out
+  // Sign out - Fixed to properly clear session and state
   const signOut = async () => {
     try {
       console.log("Signing out user");
-      await supabase.auth.signOut();
+      
+      // Clear local state first
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error signing out:", error);
+        toast.error("Terjadi kesalahan saat logout");
+        return;
+      }
+      
+      // Clear any potential localStorage items related to auth
+      localStorage.removeItem("supabase.auth.token");
+      
       toast.info("Berhasil keluar");
-      navigate("/");
+      navigate("/login");
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Exception during sign out:", error);
       toast.error("Terjadi kesalahan saat logout");
     }
   };

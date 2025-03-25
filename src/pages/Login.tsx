@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +44,14 @@ const Login = () => {
   });
 
   const isAdminField = form.watch("isAdmin");
+  
+  // Reset admin fields when toggling off
+  useEffect(() => {
+    if (!isAdminField) {
+      form.setValue('adminCode', '');
+      setAdminLoginError(null);
+    }
+  }, [isAdminField, form]);
 
   // Get the return path from location state or default to "/"
   const from = location.state?.from || "/";
@@ -63,18 +71,24 @@ const Login = () => {
     const { error } = await signIn(data.email, data.password);
     
     if (!error) {
-      // Check if the user was trying to access a protected route
-      // and redirect them back to that route after login
+      // Login successful
       toast.success("Login berhasil!");
       
       if (data.isAdmin) {
         // Check if user is actually an admin using the RPC function
-        const { data: isAdminResult } = await supabase.rpc('is_admin');
+        const { data: isAdminResult, error: adminCheckError } = await supabase.rpc('is_admin');
+        
+        if (adminCheckError) {
+          console.error("Error checking admin status:", adminCheckError);
+          toast.error("Tidak dapat memverifikasi status admin");
+          return;
+        }
         
         if (!isAdminResult) {
           toast.error("Anda tidak memiliki hak akses admin");
           return;
         }
+        
         navigate("/admin");
       } else {
         navigate(from);
@@ -110,6 +124,7 @@ const Login = () => {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Email field */}
                 <FormField
                   control={form.control}
                   name="email"
@@ -126,6 +141,8 @@ const Login = () => {
                     </FormItem>
                   )}
                 />
+                
+                {/* Password field */}
                 <FormField
                   control={form.control}
                   name="password"
@@ -143,7 +160,7 @@ const Login = () => {
                   )}
                 />
                 
-                {/* Hidden button to toggle admin fields, only visible on click in a specific area */}
+                {/* Hidden button to toggle admin fields */}
                 <div className="flex items-center justify-between">
                   <div
                     className="text-xs text-muted-foreground cursor-default select-none"
@@ -158,6 +175,7 @@ const Login = () => {
                   </Link>
                 </div>
                 
+                {/* Admin fields only shown when toggled */}
                 {showAdminFields && (
                   <>
                     <FormField
@@ -202,6 +220,7 @@ const Login = () => {
                   </>
                 )}
                 
+                {/* Admin login error message */}
                 {adminLoginError && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
