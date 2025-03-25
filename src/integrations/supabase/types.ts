@@ -39,6 +39,33 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          role?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           created_at: string | null
@@ -113,17 +140,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_profile_by_id: {
-        Args: {
-          user_id: string
-        }
-        Returns: {
-          id: string
-          email: string
-          role: string
-          full_name: string
-        }[]
-      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

@@ -1,9 +1,8 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -11,28 +10,18 @@ interface RequireAuthProps {
 
 // Use this component to ensure the user is logged in for specific pages/features
 const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
-  const { user, isLoading, session } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  // Show error toast when redirecting
-  useEffect(() => {
-    if (!isLoading && !user) {
-      toast.error("Anda harus login terlebih dahulu");
-    }
-  }, [isLoading, user]);
-
-  // While checking authentication status, show loading spinner
+  // While checking authentication status, show nothing
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-lg">Memuat...</span>
-      </div>
-    );
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
 
   // If not logged in, redirect to login with return path
-  if (!user || !session) {
+  if (!user) {
+    toast.error("Anda harus login terlebih dahulu");
+    
     return (
       <Navigate 
         to="/login" 

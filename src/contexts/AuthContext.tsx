@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -59,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log("Retrieved existing session:", session ? "Yes" : "No");
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -78,32 +76,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
-      console.log("Fetching profile for user:", userId);
-      
-      // Using RPC function instead of direct table query to avoid type issues
-      const { data, error } = await supabase.rpc('get_profile_by_id', {
-        user_id: userId
-      });
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
       if (error) {
         console.error("Error fetching profile:", error);
         setProfile(null);
-      } else if (data && data.length > 0) {
-        console.log("Profile retrieved:", data);
-        // Fix: Access the first item in the array returned from the RPC function
-        const profileData = data[0];
-        const userProfile: UserProfile = {
-          id: profileData.id,
-          email: profileData.email,
-          role: profileData.role,
-          full_name: profileData.full_name
-        };
-        setProfile(userProfile);
       } else {
-        setProfile(null);
+        setProfile(data as UserProfile);
       }
     } catch (error) {
-      console.error("Exception fetching profile:", error);
+      console.error("Error fetching profile:", error);
       setProfile(null);
     }
   };
@@ -111,26 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
-      console.log("Signing in user:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error("Sign in error:", error.message);
-        toast.error(error.message || "Login gagal. Silakan periksa email dan password Anda.");
+        toast.error(error.message);
         return { error };
       }
 
       if (data.user) {
-        console.log("User signed in successfully:", data.user.id);
         await fetchProfile(data.user.id);
+        toast.success("Berhasil masuk!");
+        navigate("/");
       }
 
       return { error: null };
-    } catch (error: any) {
-      console.error("Exception during sign in:", error);
+    } catch (error) {
       toast.error("Terjadi kesalahan saat login");
       return { error };
     }
@@ -139,7 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      console.log("Signing up new user:", email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -151,46 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error("Sign up error:", error.message);
-        toast.error(error.message || "Registrasi gagal. Silakan coba lagi.");
+        toast.error(error.message);
         return { error };
       }
 
       toast.success("Berhasil mendaftar! Silahkan cek email Anda untuk verifikasi.");
       return { error: null };
-    } catch (error: any) {
-      console.error("Exception during sign up:", error);
+    } catch (error) {
       toast.error("Terjadi kesalahan saat registrasi");
       return { error };
     }
   };
 
-  // Sign out - Fixed to properly clear session and state
+  // Sign out
   const signOut = async () => {
     try {
-      console.log("Signing out user");
-      
-      // Then sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Error signing out:", error);
-        toast.error("Terjadi kesalahan saat logout");
-        return;
-      }
-      
-      // Clear local state after successful signout
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-      
-      // Clear any potential localStorage items related to auth
-      localStorage.removeItem("supabase.auth.token");
-      
+      await supabase.auth.signOut();
       toast.info("Berhasil keluar");
-      navigate("/login");
+      navigate("/");
     } catch (error) {
-      console.error("Exception during sign out:", error);
+      console.error("Error signing out:", error);
       toast.error("Terjadi kesalahan saat logout");
     }
   };
