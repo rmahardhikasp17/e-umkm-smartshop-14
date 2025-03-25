@@ -30,7 +30,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
   Form,
@@ -49,6 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import PageTransition from "../components/transitions/PageTransition";
 import Navbar from "../components/Navbar";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 // Checkout form schema
 const checkoutFormSchema = z.object({
@@ -62,7 +62,7 @@ const checkoutFormSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
-const Cart = () => {
+const CartContent = () => {
   const { items, removeFromCart, updateQuantity, clearCart, totalPrice } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -102,21 +102,35 @@ const Cart = () => {
     setIsProcessing(true);
     
     try {
-      // For each item in the cart, create a transaction
-      for (const item of items) {
-        const { data: transactionData, error } = await supabase
+      // Log transaction data for debugging
+      console.log('User ID:', user?.id);
+      console.log('Items to process:', items);
+      
+      if (!user?.id) {
+        throw new Error("User ID is missing");
+      }
+      
+      // Create transaction promises
+      const transactionPromises = items.map(item => {
+        return supabase
           .from("transactions")
           .insert({
-            user_id: user?.id,
+            user_id: user.id,
             product_id: item.id,
             quantity: item.quantity,
             total_price: item.price * item.quantity,
             status: "Menunggu Pembayaran"
           });
-
-        if (error) {
-          throw error;
-        }
+      });
+      
+      // Wait for all transactions to complete
+      const results = await Promise.all(transactionPromises);
+      
+      // Check for errors
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        console.error("Transaction errors:", errors);
+        throw new Error(`Failed to process ${errors.length} items`);
       }
 
       // Success
@@ -126,35 +140,34 @@ const Cart = () => {
       navigate("/");
     } catch (error) {
       console.error("Error processing checkout:", error);
-      toast.error("Terjadi kesalahan saat memproses pesanan");
+      toast.error("Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <PageTransition>
-      <Navbar />
-      <div className="container py-12">
-        <h1 className="text-3xl font-bold mb-6">Keranjang Belanja</h1>
-        
-        {items.length === 0 ? (
-          <div className="text-center py-16 bg-secondary/30 rounded-lg">
-            <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h2 className="text-xl font-medium mb-2">Keranjang Belanja Kosong</h2>
-            <p className="text-muted-foreground mb-6">
-              Anda belum menambahkan produk ke keranjang belanja
-            </p>
-            <Link to="/products">
-              <Button>
-                Lihat Produk
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="container py-8 md:py-12">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Keranjang Belanja</h1>
+      
+      {items.length === 0 ? (
+        <div className="text-center py-12 md:py-16 bg-secondary/30 rounded-lg">
+          <ShoppingBag className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+          <h2 className="text-lg md:text-xl font-medium mb-2">Keranjang Belanja Kosong</h2>
+          <p className="text-muted-foreground mb-6 text-sm md:text-base">
+            Anda belum menambahkan produk ke keranjang belanja
+          </p>
+          <Link to="/products">
+            <Button>
+              Lihat Produk
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 overflow-x-auto">
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -216,64 +229,121 @@ const Cart = () => {
                   </TableBody>
                 </Table>
               </div>
-            </div>
-            
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ringkasan Pesanan</CardTitle>
-                  <CardDescription>
-                    Periksa pesanan Anda sebelum checkout
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatPrice(totalPrice)}</span>
+              
+              {/* Mobile View for Cart Items */}
+              <div className="md:hidden">
+                {items.map((item) => (
+                  <div key={item.id} className="p-4 border-b last:border-0">
+                    <div className="flex items-start space-x-3">
+                      <img 
+                        src={item.image} 
+                        alt={item.name} 
+                        className="w-20 h-20 object-cover rounded" 
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium mb-1">{item.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-2">{formatPrice(item.price)}</p>
+                        
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center space-x-2 border rounded-md p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm">{item.quantity}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={item.quantity >= item.stock}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex items-center">
+                            <span className="mr-2 font-medium">{formatPrice(item.price * item.quantity)}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => removeFromCart(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pengiriman</span>
-                    <span>Gratis</span>
-                  </div>
-                  <div className="border-t pt-4 flex justify-between font-bold">
-                    <span>Total</span>
-                    <span>{formatPrice(totalPrice)}</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex-col space-y-2">
-                  <Button className="w-full" onClick={onCheckout}>
-                    Checkout
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={clearCart}
-                  >
-                    Kosongkan Keranjang
-                  </Button>
-                </CardFooter>
-              </Card>
+                ))}
+              </div>
             </div>
           </div>
-        )}
-        
-        {/* Checkout Dialog */}
-        <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Checkout Pesanan</DialogTitle>
-              <DialogDescription>
-                Masukkan informasi pengiriman dan pembayaran
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmitCheckout)} className="space-y-4">
+          
+          <div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl">Ringkasan Pesanan</CardTitle>
+                <CardDescription>
+                  Periksa pesanan Anda sebelum checkout
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pb-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatPrice(totalPrice)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Pengiriman</span>
+                  <span>Gratis</span>
+                </div>
+                <div className="border-t pt-4 flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>{formatPrice(totalPrice)}</span>
+                </div>
+              </CardContent>
+              <CardFooter className="flex-col space-y-2">
+                <Button className="w-full" onClick={onCheckout}>
+                  Checkout
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={clearCart}
+                >
+                  Kosongkan Keranjang
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      )}
+      
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="max-w-md sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Checkout Pesanan</DialogTitle>
+            <DialogDescription>
+              Masukkan informasi pengiriman dan pembayaran
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitCheckout)} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Nama Lengkap</FormLabel>
                       <FormControl>
                         <Input placeholder="Masukkan nama lengkap" {...field} />
@@ -315,10 +385,10 @@ const Cart = () => {
                   control={form.control}
                   name="address"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Alamat Pengiriman</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Masukkan alamat lengkap" {...field} />
+                        <Textarea className="min-h-24" placeholder="Masukkan alamat lengkap" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -329,7 +399,7 @@ const Cart = () => {
                   control={form.control}
                   name="paymentMethod"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Metode Pembayaran</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
@@ -352,7 +422,7 @@ const Cart = () => {
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Catatan (Optional)</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Tambahkan catatan untuk pesanan Anda" {...field} />
@@ -361,28 +431,39 @@ const Cart = () => {
                     </FormItem>
                   )}
                 />
-                
-                <div className="flex items-center p-3 rounded-md bg-primary/10 mb-4">
-                  <AlertCircle className="h-5 w-5 text-primary mr-2" />
-                  <p className="text-sm">
-                    Total pembayaran: <strong>{formatPrice(totalPrice)}</strong>
-                  </p>
-                </div>
-                
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCheckoutOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button type="submit" disabled={isProcessing}>
-                    {isProcessing ? "Memproses..." : "Konfirmasi Pesanan"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </PageTransition>
+              </div>
+              
+              <div className="flex items-center p-3 rounded-md bg-primary/10 mb-4">
+                <AlertCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+                <p className="text-sm">
+                  Total pembayaran: <strong>{formatPrice(totalPrice)}</strong>
+                </p>
+              </div>
+              
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={() => setIsCheckoutOpen(false)} className="w-full sm:w-auto">
+                  Batal
+                </Button>
+                <Button type="submit" disabled={isProcessing} className="w-full sm:w-auto">
+                  {isProcessing ? "Memproses..." : "Konfirmasi Pesanan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+const Cart = () => {
+  return (
+    <ProtectedRoute>
+      <PageTransition>
+        <Navbar />
+        <CartContent />
+      </PageTransition>
+    </ProtectedRoute>
   );
 };
 
