@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { formatPrice } from "@/utils/data";
-import { Trash2, ShoppingBag, AlertCircle, Plus, Minus } from "lucide-react";
+import { Trash2, ShoppingBag, AlertCircle, Plus, Minus, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { 
   Table, 
@@ -49,6 +49,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PageTransition from "../components/transitions/PageTransition";
 import Navbar from "../components/Navbar";
 import ProtectedRoute from "../components/ProtectedRoute";
+import { Container } from "@/components/ui/container";
 
 // Checkout form schema
 const checkoutFormSchema = z.object({
@@ -68,6 +69,8 @@ const CartContent = () => {
   const navigate = useNavigate();
   const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [orderSuccess, setOrderSuccess] = React.useState(false);
+  const [orderNumber, setOrderNumber] = React.useState<string | null>(null);
 
   // Initialize form
   const form = useForm<CheckoutFormValues>({
@@ -98,21 +101,55 @@ const CartContent = () => {
     setIsCheckoutOpen(true);
   };
 
+  const handleOrderSuccess = (orderId: string) => {
+    setOrderSuccess(true);
+    setOrderNumber(orderId);
+    clearCart();
+    
+    // Show success toast with order number
+    toast.success(`Pesanan #${orderId.substring(0, 8)} berhasil dibuat!`, {
+      description: "Terima kasih telah berbelanja di toko kami",
+      icon: <CheckCircle className="h-4 w-4" />,
+      duration: 5000,
+    });
+    
+    // Close checkout dialog after a short delay
+    setTimeout(() => {
+      setIsCheckoutOpen(false);
+      // Reset success state after dialog closes
+      setTimeout(() => {
+        setOrderSuccess(false);
+        setOrderNumber(null);
+      }, 500);
+    }, 3000);
+  };
+
   const onSubmitCheckout = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     
     try {
-      // Log transaction data for debugging
-      console.log('User ID:', user?.id);
-      console.log('Items to process:', items);
-      
-      if (!user?.id) {
-        throw new Error("User ID is missing");
+      // Check if cart is empty
+      if (items.length === 0) {
+        throw new Error("Keranjang belanja kosong");
       }
       
-      // Create transaction promises
-      const transactionPromises = items.map(item => {
-        return supabase
+      // Check if user ID exists
+      if (!user?.id) {
+        throw new Error("User ID tidak ditemukan");
+      }
+      
+      console.log('Processing checkout for user:', user.id);
+      console.log('Items to process:', items);
+      console.log('Shipping details:', data);
+      
+      // Create an array to store the results
+      const results = [];
+      
+      // Process each item individually
+      for (const item of items) {
+        console.log(`Processing item ${item.id}, quantity: ${item.quantity}`);
+        
+        const { data: transactionData, error } = await supabase
           .from("transactions")
           .insert({
             user_id: user.id,
@@ -120,34 +157,66 @@ const CartContent = () => {
             quantity: item.quantity,
             total_price: item.price * item.quantity,
             status: "Menunggu Pembayaran"
-          });
-      });
-      
-      // Wait for all transactions to complete
-      const results = await Promise.all(transactionPromises);
-      
-      // Check for errors
-      const errors = results.filter(result => result.error);
-      if (errors.length > 0) {
-        console.error("Transaction errors:", errors);
-        throw new Error(`Failed to process ${errors.length} items`);
+          })
+          .select('id')
+          .single();
+        
+        if (error) {
+          console.error("Error inserting transaction:", error);
+          throw new Error(`Gagal memproses item: ${item.name}`);
+        }
+        
+        console.log(`Successfully processed item ${item.id}, transaction ID: ${transactionData?.id}`);
+        results.push(transactionData);
       }
-
-      // Success
-      toast.success("Pesanan berhasil dibuat!");
-      setIsCheckoutOpen(false);
-      clearCart();
-      navigate("/");
-    } catch (error) {
+      
+      // Get the first transaction ID to use as the order number
+      const firstOrderId = results[0]?.id || 'unknown';
+      
+      // Handle successful order
+      handleOrderSuccess(firstOrderId);
+      
+    } catch (error: any) {
       console.error("Error processing checkout:", error);
-      toast.error("Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.");
-    } finally {
       setIsProcessing(false);
+      
+      // Show specific error message
+      toast.error(
+        error.message || "Terjadi kesalahan saat memproses pesanan",
+        {
+          description: "Silakan coba lagi atau hubungi customer service",
+          duration: 5000,
+        }
+      );
     }
   };
 
+  // Success content for the checkout dialog
+  const SuccessContent = () => (
+    <div className="flex flex-col items-center py-8">
+      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+        <CheckCircle className="h-8 w-8 text-green-600" />
+      </div>
+      <h3 className="text-xl font-semibold mb-2">Pesanan Berhasil!</h3>
+      <p className="text-center text-muted-foreground mb-4">
+        Pesanan dengan nomor <span className="font-medium">#{orderNumber?.substring(0, 8)}</span> telah berhasil dibuat
+      </p>
+      <p className="text-sm text-center text-muted-foreground mb-6">
+        Kami akan memproses pesanan Anda secepatnya. Detail pesanan telah dikirim ke email Anda.
+      </p>
+      <Button 
+        onClick={() => {
+          setIsCheckoutOpen(false);
+          navigate("/");
+        }}
+      >
+        Kembali ke Beranda
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="container py-8 md:py-12">
+    <Container className="py-8 md:py-12">
       <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Keranjang Belanja</h1>
       
       {items.length === 0 ? (
@@ -327,132 +396,155 @@ const CartContent = () => {
       )}
       
       {/* Checkout Dialog */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+      <Dialog open={isCheckoutOpen} onOpenChange={(open) => !isProcessing && setIsCheckoutOpen(open)}>
         <DialogContent className="max-w-md sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Checkout Pesanan</DialogTitle>
-            <DialogDescription>
-              Masukkan informasi pengiriman dan pembayaran
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmitCheckout)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Nama Lengkap</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Masukkan nama lengkap" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="email@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nomor Telepon</FormLabel>
-                      <FormControl>
-                        <Input placeholder="081234567890" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Alamat Pengiriman</FormLabel>
-                      <FormControl>
-                        <Textarea className="min-h-24" placeholder="Masukkan alamat lengkap" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Metode Pembayaran</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih metode pembayaran" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="bank_transfer">Transfer Bank</SelectItem>
-                          <SelectItem value="e_wallet">E-Wallet</SelectItem>
-                          <SelectItem value="cod">Bayar di Tempat (COD)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Catatan (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Tambahkan catatan untuk pesanan Anda" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          {orderSuccess ? (
+            <SuccessContent />
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Checkout Pesanan</DialogTitle>
+                <DialogDescription>
+                  Masukkan informasi pengiriman dan pembayaran
+                </DialogDescription>
+              </DialogHeader>
               
-              <div className="flex items-center p-3 rounded-md bg-primary/10 mb-4">
-                <AlertCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                <p className="text-sm">
-                  Total pembayaran: <strong>{formatPrice(totalPrice)}</strong>
-                </p>
-              </div>
-              
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button type="button" variant="outline" onClick={() => setIsCheckoutOpen(false)} className="w-full sm:w-auto">
-                  Batal
-                </Button>
-                <Button type="submit" disabled={isProcessing} className="w-full sm:w-auto">
-                  {isProcessing ? "Memproses..." : "Konfirmasi Pesanan"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmitCheckout)} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Nama Lengkap</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Masukkan nama lengkap" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="email@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nomor Telepon</FormLabel>
+                          <FormControl>
+                            <Input placeholder="081234567890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Alamat Pengiriman</FormLabel>
+                          <FormControl>
+                            <Textarea className="min-h-24" placeholder="Masukkan alamat lengkap" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="paymentMethod"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Metode Pembayaran</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih metode pembayaran" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="bank_transfer">Transfer Bank</SelectItem>
+                              <SelectItem value="e_wallet">E-Wallet</SelectItem>
+                              <SelectItem value="cod">Bayar di Tempat (COD)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Catatan (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Tambahkan catatan untuk pesanan Anda" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center p-3 rounded-md bg-primary/10 mb-4">
+                    <AlertCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+                    <p className="text-sm">
+                      Total pembayaran: <strong>{formatPrice(totalPrice)}</strong>
+                    </p>
+                  </div>
+                  
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => !isProcessing && setIsCheckoutOpen(false)} 
+                      className="w-full sm:w-auto"
+                      disabled={isProcessing}
+                    >
+                      Batal
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isProcessing} 
+                      className="w-full sm:w-auto"
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center">
+                          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></span>
+                          Memproses...
+                        </span>
+                      ) : (
+                        "Konfirmasi Pesanan"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Container>
   );
 };
 
