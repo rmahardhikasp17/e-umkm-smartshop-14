@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   ShoppingBag, 
@@ -17,6 +17,8 @@ import {
   Bot
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import PageTransition from "../components/transitions/PageTransition";
 import Dashboard from "../components/admin/Dashboard";
 import Products from "../components/admin/Products";
@@ -27,6 +29,14 @@ import AITools from "../components/admin/AITools";
 const Admin = () => {
   const [activeSidebar, setActiveSidebar] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Berhasil keluar dari panel admin");
+    navigate("/");
+  };
   
   const renderTabContent = () => {
     switch (activeTab) {
@@ -164,13 +174,13 @@ const Admin = () => {
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="flex items-center text-sm px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center text-sm px-3 py-2 rounded-md w-full text-left text-red-500 hover:bg-red-50 transition-colors"
                   >
                     <LogOut size={18} className="mr-2" />
                     <span>Keluar</span>
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -222,8 +232,8 @@ const Admin = () => {
                 
                 <div className="flex items-center ml-2">
                   <div className="flex flex-col items-end mr-3">
-                    <span className="text-sm font-medium">Budi Santoso</span>
-                    <span className="text-xs text-muted-foreground">Admin UMKM</span>
+                    <span className="text-sm font-medium">{profile?.full_name || "Admin"}</span>
+                    <span className="text-xs text-muted-foreground">{profile?.role || "Admin UMKM"}</span>
                   </div>
                   <UserCircle className="h-8 w-8 text-muted-foreground" />
                 </div>
