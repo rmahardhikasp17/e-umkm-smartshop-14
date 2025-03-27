@@ -149,6 +149,7 @@ const CartContent = () => {
       for (const item of items) {
         console.log(`Processing item ${item.id}, quantity: ${item.quantity}`);
         
+        // Make sure to use the authenticated user ID
         const { data: transactionData, error } = await supabase
           .from("transactions")
           .insert({
