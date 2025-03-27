@@ -93,7 +93,16 @@ const CartContent = () => {
           product_id: item.id,
           quantity: item.quantity,
           total_price: item.price * item.quantity,
-          status: "Menunggu Pembayaran"
+          status: "Menunggu Pembayaran",
+          // Add shipping information
+          shipping_info: {
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            payment_method: data.paymentMethod,
+            notes: data.notes || null
+          }
         };
         
         console.log("Transaction data to insert:", transactionData);
