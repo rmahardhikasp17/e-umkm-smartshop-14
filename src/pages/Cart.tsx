@@ -21,7 +21,7 @@ import OrderSuccess from "@/components/cart/OrderSuccess";
 
 const CartContent = () => {
   const { items, removeFromCart, updateQuantity, clearCart, totalPrice } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -69,12 +69,14 @@ const CartContent = () => {
         throw new Error("Keranjang belanja kosong");
       }
       
-      // Check if user ID exists
+      // Check if user ID exists and log it
       if (!user?.id) {
+        console.error("Checkout failed: User ID not found");
         throw new Error("User ID tidak ditemukan");
       }
       
       console.log('Processing checkout for user:', user.id);
+      console.log('User profile:', profile);
       console.log('Items to process:', items);
       console.log('Shipping details:', data);
       
@@ -85,26 +87,31 @@ const CartContent = () => {
       for (const item of items) {
         console.log(`Processing item ${item.id}, quantity: ${item.quantity}`);
         
-        // Make sure to use the authenticated user ID
-        const { data: transactionData, error } = await supabase
+        // Create the transaction data with explicit user_id
+        const transactionData = {
+          user_id: user.id,
+          product_id: item.id,
+          quantity: item.quantity,
+          total_price: item.price * item.quantity,
+          status: "Menunggu Pembayaran"
+        };
+        
+        console.log("Transaction data to insert:", transactionData);
+        
+        // Insert transaction with proper user_id field
+        const { data: insertedData, error } = await supabase
           .from("transactions")
-          .insert({
-            user_id: user.id,
-            product_id: item.id,
-            quantity: item.quantity,
-            total_price: item.price * item.quantity,
-            status: "Menunggu Pembayaran"
-          })
+          .insert(transactionData)
           .select('id')
           .single();
         
         if (error) {
           console.error("Error inserting transaction:", error);
-          throw new Error(`Gagal memproses item: ${item.name}`);
+          throw new Error(`Gagal memproses item: ${item.name}. Error: ${error.message}`);
         }
         
-        console.log(`Successfully processed item ${item.id}, transaction ID: ${transactionData?.id}`);
-        results.push(transactionData);
+        console.log(`Successfully processed item ${item.id}, transaction ID: ${insertedData?.id}`);
+        results.push(insertedData);
       }
       
       // Get the first transaction ID to use as the order number
