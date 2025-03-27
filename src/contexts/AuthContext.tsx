@@ -40,41 +40,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Initialize auth state
+  // Initialize auth state with improved loading indicators
   useEffect(() => {
-    // Set up auth state listener FIRST
+    console.log("Setting up auth state management...");
+    
+    // Set up auth state listener FIRST to prevent missing events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        if (currentSession?.user) {
+          console.log("User authenticated, fetching profile");
+          // Use setTimeout to prevent potential deadlocks
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id);
+          }, 0);
         } else {
+          console.log("No authenticated user");
           setProfile(null);
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession ? "Session found" : "No session");
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user.id);
       }
       
       setIsLoading(false);
     });
 
     return () => {
+      console.log("Cleaning up auth subscription");
       subscription.unsubscribe();
     };
   }, []);
 
-  // Fetch user profile data
+  // Fetch user profile data with improved error handling
   const fetchProfile = async (userId: string) => {
+    console.log("Fetching profile for user:", userId);
     try {
       // Use the get_profile_by_id function instead of direct table query
       const { data, error } = await supabase
@@ -82,39 +93,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error("Error fetching profile:", error);
+        toast.error("Failed to load user profile");
         setProfile(null);
       } else if (data && data.length > 0) {
+        console.log("Profile loaded successfully:", data[0]);
         setProfile(data[0] as UserProfile);
       } else {
+        console.warn("No profile found for user");
         setProfile(null);
       }
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("Exception fetching profile:", error);
+      toast.error("An unexpected error occurred");
       setProfile(null);
     }
   };
 
-  // Sign in with email and password
+  // Sign in with email and password - improved error handling
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Attempting sign in for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("Sign in error:", error);
         toast.error(error.message);
         return { error };
       }
 
       if (data.user) {
-        await fetchProfile(data.user.id);
+        console.log("Sign in successful, fetching profile");
         toast.success("Berhasil masuk!");
         navigate("/");
       }
 
       return { error: null };
     } catch (error) {
+      console.error("Exception during sign in:", error);
       toast.error("Terjadi kesalahan saat login");
       return { error };
     }
@@ -146,10 +164,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign out
+  // Enhanced sign out that properly clears the session
   const signOut = async () => {
     try {
+      console.log("Signing out user");
       await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
       toast.info("Berhasil keluar");
       navigate("/");
     } catch (error) {
