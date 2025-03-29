@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, X, Eye, Filter } from "lucide-react";
+import { Search, X, Eye, Filter, CheckCircle, RefreshCw } from "lucide-react";
 import { formatPrice } from "@/utils/data";
 import {
   Dialog,
@@ -23,6 +24,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Select,
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 // Define transaction type based on Supabase table
 type Product = {
@@ -34,6 +43,15 @@ type User = {
   email: string;
 };
 
+type ShippingInfo = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  payment_method: string;
+  notes: string | null;
+};
+
 type Transaction = {
   id: string;
   product_id: string | null;
@@ -42,11 +60,12 @@ type Transaction = {
   status: string;
   user_id: string | null;
   created_at: string | null;
+  shipping_info?: ShippingInfo | null;
   product?: Product;
   user?: User;
 };
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   "Menunggu Pembayaran": "bg-yellow-500",
   "Dibayar": "bg-blue-500",
   "Dikemas": "bg-indigo-500",
@@ -55,16 +74,26 @@ const statusColors = {
   "Dibatalkan": "bg-red-500",
 };
 
+const statusOptions = [
+  "Menunggu Pembayaran",
+  "Dibayar",
+  "Dikemas",
+  "Dikirim",
+  "Selesai",
+  "Dibatalkan"
+];
+
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Transaction | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const pageSize = 10;
 
   // Fetch transactions from Supabase
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading, refetch } = useQuery({
     queryKey: ["transactions"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -88,6 +117,40 @@ const Orders = () => {
   const handleViewOrder = (order: Transaction) => {
     setSelectedOrder(order);
     setShowDetail(true);
+  };
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedOrder) return;
+    
+    setIsUpdatingStatus(true);
+    
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: newStatus })
+        .eq("id", selectedOrder.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setSelectedOrder({
+        ...selectedOrder,
+        status: newStatus
+      });
+      
+      toast.success(`Status pesanan berhasil diperbarui menjadi ${newStatus}`);
+      
+      // Refresh the list
+      refetch();
+    } catch (error: any) {
+      toast.error("Gagal memperbarui status pesanan", {
+        description: error.message
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   // Filter transactions based on search term and status
@@ -116,12 +179,10 @@ const Orders = () => {
           <p className="text-muted-foreground">Kelola pesanan dari pelanggan Anda</p>
         </div>
         <div className="flex gap-2">
-          <div className="relative">
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
-              <Filter className="h-4 w-4" />
-              <span>Filter</span>
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="flex items-center gap-1">
+            <RefreshCw className="h-4 w-4" />
+            <span>Refresh</span>
+          </Button>
         </div>
       </div>
 
@@ -191,9 +252,9 @@ const Orders = () => {
                   {paginatedTransactions.length > 0 ? (
                     paginatedTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">{transaction.id}</TableCell>
+                        <TableCell className="font-medium">{transaction.id.substring(0, 8)}</TableCell>
                         <TableCell>{transaction.product?.name || "Unknown Product"}</TableCell>
-                        <TableCell>{transaction.user?.email || "Unknown User"}</TableCell>
+                        <TableCell>{transaction.shipping_info?.name || transaction.user?.email || "Unknown User"}</TableCell>
                         <TableCell>{formatPrice(transaction.total_price)}</TableCell>
                         <TableCell>
                           <span
@@ -273,7 +334,7 @@ const Orders = () => {
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Detail Pesanan #{selectedOrder?.id}</DialogTitle>
+            <DialogTitle>Detail Pesanan #{selectedOrder?.id.substring(0, 8)}</DialogTitle>
           </DialogHeader>
           
           {selectedOrder && (
@@ -281,13 +342,32 @@ const Orders = () => {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 mt-1 rounded-full text-xs font-medium text-white ${
-                      statusColors[selectedOrder.status as keyof typeof statusColors] || "bg-gray-500"
-                    }`}
-                  >
-                    {selectedOrder.status}
-                  </span>
+                  <div className="flex items-center mt-1">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 mr-2 rounded-full text-xs font-medium text-white ${
+                        statusColors[selectedOrder.status as keyof typeof statusColors] || "bg-gray-500"
+                      }`}
+                    >
+                      {selectedOrder.status}
+                    </span>
+                    
+                    <Select
+                      value={selectedOrder.status}
+                      onValueChange={handleUpdateStatus}
+                      disabled={isUpdatingStatus}
+                    >
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <SelectValue placeholder="Update Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map(status => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tanggal Pesanan</p>
@@ -329,6 +409,40 @@ const Orders = () => {
                   </div>
                 </div>
               </div>
+
+              {selectedOrder.shipping_info && (
+                <div className="border-b py-4 mb-4">
+                  <h3 className="font-medium mb-3">Informasi Pengiriman</h3>
+                  <div className="grid grid-cols-1 gap-y-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nama Penerima</p>
+                      <p className="font-medium">{selectedOrder.shipping_info.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedOrder.shipping_info.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nomor Telepon</p>
+                      <p className="font-medium">{selectedOrder.shipping_info.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Alamat</p>
+                      <p className="font-medium">{selectedOrder.shipping_info.address}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Metode Pembayaran</p>
+                      <p className="font-medium">{selectedOrder.shipping_info.payment_method}</p>
+                    </div>
+                    {selectedOrder.shipping_info.notes && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Catatan</p>
+                        <p className="font-medium">{selectedOrder.shipping_info.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>

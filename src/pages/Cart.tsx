@@ -60,6 +60,24 @@ const CartContent = () => {
     }, 3000);
   };
 
+  const updateTransactionStatus = async (transactionId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status })
+        .eq("id", transactionId);
+        
+      if (error) {
+        console.error("Error updating transaction status:", error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Unexpected error updating transaction status:", error);
+      return false;
+    }
+  };
+
   const onSubmitCheckout = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
     
@@ -87,6 +105,16 @@ const CartContent = () => {
       for (const item of items) {
         console.log(`Processing item ${item.id}, quantity: ${item.quantity}`);
         
+        // Create the shipping info object with the correct structure
+        const shippingInfo = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          payment_method: data.paymentMethod,
+          notes: data.notes || null
+        };
+        
         // Create the transaction data with explicit user_id
         const transactionData = {
           user_id: user.id,
@@ -95,14 +123,7 @@ const CartContent = () => {
           total_price: item.price * item.quantity,
           status: "Menunggu Pembayaran",
           // Add shipping information as JSONB
-          shipping_info: {
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            address: data.address,
-            payment_method: data.paymentMethod,
-            notes: data.notes || null
-          }
+          shipping_info: shippingInfo
         };
         
         console.log("Transaction data to insert:", transactionData);
@@ -120,6 +141,18 @@ const CartContent = () => {
         }
         
         console.log(`Successfully processed item ${item.id}, transaction ID: ${insertedData?.id}`);
+        
+        // Simulate payment process and update status to "Dibayar"
+        if (insertedData?.id) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing delay
+          const updated = await updateTransactionStatus(insertedData.id, "Dibayar");
+          if (!updated) {
+            console.warn(`Failed to update transaction ${insertedData.id} status to Dibayar`);
+          } else {
+            console.log(`Updated transaction ${insertedData.id} status to Dibayar`);
+          }
+        }
+        
         results.push(insertedData);
       }
       

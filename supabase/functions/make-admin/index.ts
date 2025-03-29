@@ -1,6 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.22.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,89 +10,80 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    // Create a Supabase client with the service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-    const { email } = await req.json();
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required");
+    }
 
-    if (!email) {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { email, password, full_name } = await req.json();
+
+    if (!email || !password) {
       return new Response(
-        JSON.stringify({ error: "Email is required" }),
+        JSON.stringify({ error: "Email and password are required" }),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    // First, get the user by email
-    const { data: userData, error: userError } = await supabaseClient
-      .from("profiles")
-      .select("*")
-      .eq("email", email)
-      .single();
+    console.log(`Creating admin account for ${email}...`);
+
+    // 1. Create the user with auth.admin.createUser
+    const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name },
+    });
 
     if (userError) {
-      console.error("Error fetching user:", userError);
-      return new Response(
-        JSON.stringify({ error: `User not found with email: ${email}` }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
-        }
-      );
+      console.error("Error creating user:", userError);
+      throw userError;
     }
 
-    // Update the user's role to admin
-    const { data, error } = await supabaseClient
+    const userId = userData.user.id;
+    console.log(`User created with ID: ${userId}`);
+
+    // 2. Update the profile role to 'admin'
+    const { error: profileError } = await supabase
       .from("profiles")
       .update({ role: "admin" })
-      .eq("id", userData.id);
+      .eq("id", userId);
 
-    if (error) {
-      console.error("Error updating user role:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to update user role" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
-      );
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+      throw profileError;
     }
+
+    console.log(`Admin role assigned to user: ${userId}`);
 
     return new Response(
       JSON.stringify({ 
-        message: `User ${email} has been made an admin`,
-        user: userData.id 
+        message: "Admin account created successfully",
+        user: userData.user 
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-    
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("Error in make-admin function:", error);
+    
     return new Response(
-      JSON.stringify({ error: "Internal Server Error" }),
+      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
