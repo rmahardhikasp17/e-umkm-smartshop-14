@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +25,7 @@ const AdminLogin = () => {
   const { signIn, session, profile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [redirected, setRedirected] = useState(false);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -34,20 +35,42 @@ const AdminLogin = () => {
     },
   });
 
+  // Effect for redirect handling
+  useEffect(() => {
+    if (session && profile && !isLoading && !redirected) {
+      if (profile.role === 'admin') {
+        console.log("Admin detected, redirecting to admin dashboard");
+        setRedirected(true);
+        navigate("/admin");
+      } else {
+        // If logged in but not admin, show error and redirect to home
+        toast.error("Akses ditolak", {
+          description: "Anda tidak memiliki akses ke panel admin",
+        });
+        setRedirected(true);
+        navigate("/");
+      }
+    }
+  }, [session, profile, isLoading, navigate, redirected]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
     try {
+      console.log("Attempting admin login with email:", data.email);
       const { error } = await signIn(data.email, data.password);
       
       if (error) {
+        console.error("Admin login failed:", error);
         toast.error("Login gagal", {
           description: error.message || "Periksa email dan password Anda",
         });
         return;
       }
       
-      // Check will be done in useEffect for redirect
+      console.log("Admin login successful, waiting for profile data");
+      // Redirect will be handled by the useEffect
     } catch (error: any) {
+      console.error("Error during admin login:", error);
       toast.error("Terjadi kesalahan", {
         description: error.message || "Silakan coba lagi",
       });
@@ -56,17 +79,13 @@ const AdminLogin = () => {
     }
   };
 
-  // Redirect if already logged in as admin
-  if (session && profile && !isLoading) {
-    if (profile.role === 'admin') {
-      return <Navigate to="/admin" />;
-    } else {
-      // If logged in but not admin, show error and redirect to home
-      toast.error("Akses ditolak", {
-        description: "Anda tidak memiliki akses ke panel admin",
-      });
-      return <Navigate to="/" />;
-    }
+  // Prevent flash of login form if already authenticated as admin
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
+
+  if (session && profile && profile.role === 'admin' && !redirected) {
+    return <Navigate to="/admin" />;
   }
 
   return (
@@ -138,6 +157,11 @@ const AdminLogin = () => {
             </Form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
+            <div className="text-sm text-center text-muted-foreground">
+              <a href="/create-admin" className="text-primary hover:underline">
+                Buat akun admin baru
+              </a>
+            </div>
             <div className="text-sm text-center text-muted-foreground">
               Kembali ke{" "}
               <a href="/" className="text-primary hover:underline">

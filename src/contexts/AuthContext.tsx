@@ -87,25 +87,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = async (userId: string) => {
     console.log("Fetching profile for user:", userId);
     try {
-      // Use the get_profile_by_id function instead of direct table query
-      const { data, error } = await supabase
-        .rpc('get_profile_by_id', { user_id: userId });
+      // First try to get the profile directly from the profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
-        toast.error("Failed to load user profile");
-        setProfile(null);
-      } else if (data && data.length > 0) {
-        console.log("Profile loaded successfully:", data[0]);
-        setProfile(data[0] as UserProfile);
+      if (profileError) {
+        console.error("Error fetching profile from direct query:", profileError);
+        
+        // Fallback to using the RPC function if direct query fails
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_profile_by_id', { user_id: userId });
+
+        if (rpcError) {
+          console.error("Error fetching profile from RPC:", rpcError);
+          toast.error("Failed to load user profile");
+          setProfile(null);
+        } else if (rpcData && rpcData.length > 0) {
+          console.log("Profile loaded successfully from RPC:", rpcData[0]);
+          setProfile(rpcData[0] as UserProfile);
+        } else {
+          console.warn("No profile found for user in RPC");
+          
+          // If no profile exists, we might want to create one
+          await createProfile(userId);
+        }
+      } else if (profileData) {
+        console.log("Profile loaded successfully:", profileData);
+        setProfile(profileData as UserProfile);
       } else {
         console.warn("No profile found for user");
-        setProfile(null);
+        
+        // If no profile exists, we might want to create one
+        await createProfile(userId);
       }
     } catch (error) {
       console.error("Exception fetching profile:", error);
       toast.error("An unexpected error occurred");
       setProfile(null);
+    }
+  };
+
+  // Create profile if it doesn't exist
+  const createProfile = async (userId: string) => {
+    if (!user) return;
+    
+    try {
+      console.log("Creating new profile for user:", userId);
+      
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData.user) {
+        console.error("No user data found when creating profile");
+        return;
+      }
+      
+      const newProfile = {
+        id: userId,
+        email: userData.user.email,
+        role: 'user',
+        full_name: userData.user.user_metadata?.full_name || null
+      };
+      
+      const { error } = await supabase
+        .from('profiles')
+        .insert(newProfile);
+        
+      if (error) {
+        console.error("Error creating profile:", error);
+        return;
+      }
+      
+      console.log("Profile created successfully:", newProfile);
+      setProfile(newProfile);
+      
+    } catch (error) {
+      console.error("Exception creating profile:", error);
     }
   };
 
