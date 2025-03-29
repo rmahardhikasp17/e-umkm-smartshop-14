@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
@@ -17,7 +16,7 @@ import {
   Bot
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import PageTransition from "../components/transitions/PageTransition";
 import Dashboard from "../components/admin/Dashboard";

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -35,7 +34,6 @@ const AdminLogin = () => {
     },
   });
 
-  // Effect for redirect handling
   useEffect(() => {
     if (session && profile && !isLoading && !redirected) {
       if (profile.role === 'admin') {
@@ -43,7 +41,6 @@ const AdminLogin = () => {
         setRedirected(true);
         navigate("/admin");
       } else {
-        // If logged in but not admin, show error and redirect to home
         toast.error("Akses ditolak", {
           description: "Anda tidak memiliki akses ke panel admin",
         });
@@ -68,7 +65,6 @@ const AdminLogin = () => {
       }
       
       console.log("Admin login successful, waiting for profile data");
-      // Redirect will be handled by the useEffect
     } catch (error: any) {
       console.error("Error during admin login:", error);
       toast.error("Terjadi kesalahan", {
@@ -79,7 +75,6 @@ const AdminLogin = () => {
     }
   };
 
-  // Prevent flash of login form if already authenticated as admin
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }

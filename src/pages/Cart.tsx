@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";

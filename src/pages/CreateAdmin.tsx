@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,7 +12,7 @@ import { Shield, Mail, LockKeyhole, User } from "lucide-react";
 import { toast } from "sonner";
 import PageTransition from "@/components/transitions/PageTransition";
 import Navbar from "@/components/Navbar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 const adminSchema = z.object({
   fullName: z.string().min(3, "Nama lengkap minimal 3 karakter"),
