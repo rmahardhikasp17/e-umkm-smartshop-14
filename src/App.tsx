@@ -14,6 +14,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -29,6 +30,7 @@ const AppRoutes = () => (
     <Route path="/about" element={<About />} />
     <Route path="/contact" element={<Contact />} />
     <Route path="/login" element={<Login />} />
+    <Route path="/admin-login" element={<AdminLogin />} />
     <Route path="/register" element={<Register />} />
     <Route 
       path="/admin" 

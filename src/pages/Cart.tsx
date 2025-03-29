@@ -94,7 +94,7 @@ const CartContent = () => {
           quantity: item.quantity,
           total_price: item.price * item.quantity,
           status: "Menunggu Pembayaran",
-          // Add shipping information
+          // Add shipping information as JSONB
           shipping_info: {
             name: data.name,
             email: data.email,

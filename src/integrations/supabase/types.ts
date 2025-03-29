@@ -69,6 +69,7 @@ export type Database = {
           id: string
           product_id: string | null
           quantity: number
+          shipping_info: Json | null
           status: string
           total_price: number
           user_id: string | null
@@ -78,6 +79,7 @@ export type Database = {
           id?: string
           product_id?: string | null
           quantity: number
+          shipping_info?: Json | null
           status: string
           total_price: number
           user_id?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           id?: string
           product_id?: string | null
           quantity?: number
+          shipping_info?: Json | null
           status?: string
           total_price?: number
           user_id?: string | null

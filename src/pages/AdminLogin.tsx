@@ -4,12 +4,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LockKeyhole, Mail } from "lucide-react";
+import { Shield, Mail, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import PageTransition from "@/components/transitions/PageTransition";
 import Navbar from "@/components/Navbar";
@@ -21,7 +21,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const Login = () => {
+const AdminLogin = () => {
   const { signIn, session, profile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +46,7 @@ const Login = () => {
         return;
       }
       
-      // Redirect will be handled by the useEffect based on user role
+      // Check will be done in useEffect for redirect
     } catch (error: any) {
       toast.error("Terjadi kesalahan", {
         description: error.message || "Silakan coba lagi",
@@ -56,11 +56,15 @@ const Login = () => {
     }
   };
 
-  // Redirect if already logged in
+  // Redirect if already logged in as admin
   if (session && profile && !isLoading) {
     if (profile.role === 'admin') {
       return <Navigate to="/admin" />;
     } else {
+      // If logged in but not admin, show error and redirect to home
+      toast.error("Akses ditolak", {
+        description: "Anda tidak memiliki akses ke panel admin",
+      });
       return <Navigate to="/" />;
     }
   }
@@ -71,9 +75,14 @@ const Login = () => {
       <div className="container py-12 md:py-16 flex justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Masuk Akun</CardTitle>
+            <div className="flex items-center justify-center mb-2">
+              <div className="bg-primary/10 p-3 rounded-full">
+                <Shield className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
             <CardDescription className="text-center">
-              Masukkan email dan password Anda untuk masuk
+              Masukkan kredensial admin Anda untuk akses panel admin
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -88,7 +97,7 @@ const Login = () => {
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                          <Input placeholder="email@example.com" className="pl-10" {...field} />
+                          <Input placeholder="admin@example.com" className="pl-10" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -121,23 +130,19 @@ const Login = () => {
                       <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></span>
                       Memproses...
                     </span>
-                  ) : "Masuk"}
+                  ) : (
+                    "Masuk ke Panel Admin"
+                  )}
                 </Button>
               </form>
             </Form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center text-muted-foreground">
-              Belum punya akun?{" "}
-              <Link to="/register" className="text-primary hover:underline">
-                Daftar disini
-              </Link>
-            </div>
-            <div className="text-sm text-center text-muted-foreground">
-              Login sebagai admin?{" "}
-              <Link to="/admin-login" className="text-primary hover:underline">
-                Login admin
-              </Link>
+              Kembali ke{" "}
+              <a href="/" className="text-primary hover:underline">
+                beranda
+              </a>
             </div>
           </CardFooter>
         </Card>
@@ -146,4 +151,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default AdminLogin;

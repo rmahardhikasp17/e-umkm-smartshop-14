@@ -126,8 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data.user) {
         console.log("Sign in successful, fetching profile");
+        await fetchProfile(data.user.id);
+        
         toast.success("Berhasil masuk!");
-        navigate("/");
+        
+        // Navigate based on role - Now handled by the component
       }
 
       return { error: null };
