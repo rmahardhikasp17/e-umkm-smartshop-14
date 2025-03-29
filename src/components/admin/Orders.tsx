@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -6,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, X, Eye, Filter, CheckCircle, RefreshCw } from "lucide-react";
+import { Search, X, Eye, RefreshCw } from "lucide-react";
 import { formatPrice } from "@/utils/data";
 import {
   Dialog,
@@ -24,8 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent, 
   SelectItem, 
@@ -33,7 +31,6 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 
-// Define transaction type based on Supabase table
 type Product = {
   name: string;
   image_url: string | null;
@@ -92,7 +89,6 @@ const Orders = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const pageSize = 10;
 
-  // Fetch transactions from Supabase
   const { data: transactions, isLoading, refetch } = useQuery({
     queryKey: ["transactions"],
     queryFn: async () => {
@@ -125,6 +121,21 @@ const Orders = () => {
     setIsUpdatingStatus(true);
     
     try {
+      if (newStatus === "Dibatalkan" && 
+          (selectedOrder.status === "Dibayar" || selectedOrder.status === "Dikemas")) {
+        
+        if (selectedOrder.product_id) {
+          const restoreStock = await supabase.rpc('increment', {
+            product_id: selectedOrder.product_id,
+            quantity: selectedOrder.quantity
+          });
+          
+          if (restoreStock.error) {
+            throw new Error(`Gagal mengembalikan stok: ${restoreStock.error.message}`);
+          }
+        }
+      }
+      
       const { error } = await supabase
         .from("transactions")
         .update({ status: newStatus })
@@ -134,7 +145,6 @@ const Orders = () => {
         throw error;
       }
       
-      // Update local state
       setSelectedOrder({
         ...selectedOrder,
         status: newStatus
@@ -142,7 +152,6 @@ const Orders = () => {
       
       toast.success(`Status pesanan berhasil diperbarui menjadi ${newStatus}`);
       
-      // Refresh the list
       refetch();
     } catch (error: any) {
       toast.error("Gagal memperbarui status pesanan", {
@@ -153,7 +162,6 @@ const Orders = () => {
     }
   };
 
-  // Filter transactions based on search term and status
   const filteredTransactions = transactions?.filter(
     (transaction) =>
       (transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,13 +170,11 @@ const Orders = () => {
       (!filterStatus || transaction.status === filterStatus)
   ) || [];
 
-  // Paginate transactions
   const paginatedTransactions = filteredTransactions.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  // Calculate total pages
   const totalPages = Math.ceil(filteredTransactions.length / pageSize);
 
   return (
@@ -214,7 +220,7 @@ const Orders = () => {
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {["Menunggu Pembayaran", "Dibayar", "Dikemas", "Dikirim", "Selesai", "Dibatalkan"].map((status) => (
+              {statusOptions.map((status) => (
                 <Button
                   key={status}
                   variant={filterStatus === status ? "default" : "outline"}
@@ -330,7 +336,6 @@ const Orders = () => {
         )}
       </motion.div>
 
-      {/* Order Detail Dialog */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
