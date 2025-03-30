@@ -60,7 +60,7 @@ const CartContent = () => {
     }, 3000);
   };
 
-  // Check if product is available and has enough stock
+  // Validate product stock availability
   const validateProduct = async (productId: string, quantity: number) => {
     try {
       const { data, error } = await supabase
@@ -93,27 +93,6 @@ const CartContent = () => {
     }
   };
 
-  // Update product stock after successful order
-  const updateProductStock = async (productId: string, quantity: number) => {
-    try {
-      const { error } = await supabase
-        .from("products")
-        .update({ stock: supabase.rpc('decrement', { x: quantity }) })
-        .eq("id", productId)
-        .gt("stock", quantity - 1); // Ensure stock is sufficient at time of update
-        
-      if (error) {
-        console.error("Error updating product stock:", error);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Unexpected error updating product stock:", error);
-      return false;
-    }
-  };
-
   // Create a new transaction with initial "Menunggu Pembayaran" status
   const createTransaction = async (
     userId: string,
@@ -123,6 +102,13 @@ const CartContent = () => {
     shippingInfo: any
   ) => {
     try {
+      // First validate the product availability again before creating the transaction
+      const validation = await validateProduct(productId, quantity);
+      if (!validation.valid) {
+        return { success: false, id: null, error: new Error(validation.message) };
+      }
+      
+      // Create the transaction within a single SQL operation
       const { data, error } = await supabase
         .from("transactions")
         .insert({
@@ -141,6 +127,24 @@ const CartContent = () => {
         return { success: false, id: null, error };
       }
       
+      // Update the product stock using the safe decrement function
+      const { error: decrementError } = await supabase.rpc('decrement', {
+        product_id: productId,
+        quantity: quantity
+      });
+      
+      if (decrementError) {
+        console.error("Error decrementing stock:", decrementError);
+        
+        // If stock update fails, attempt to cancel the transaction
+        await supabase
+          .from("transactions")
+          .update({ status: "Dibatalkan" })
+          .eq("id", data.id);
+          
+        return { success: false, id: null, error: decrementError };
+      }
+      
       return { success: true, id: data.id, error: null };
     } catch (error) {
       console.error("Unexpected error creating transaction:", error);
@@ -148,7 +152,7 @@ const CartContent = () => {
     }
   };
 
-  // Update transaction status
+  // Update transaction status with simpler implementation
   const updateTransactionStatus = async (transactionId: string, status: string) => {
     try {
       console.log(`Updating transaction ${transactionId} status to ${status}`);
@@ -225,7 +229,7 @@ const CartContent = () => {
       for (const item of items) {
         console.log(`Processing item ${item.id}, quantity: ${item.quantity}`);
         
-        // Create transaction
+        // Create transaction and update stock in a single operation
         const transactionResult = await createTransaction(
           user.id,
           item.id,
@@ -238,27 +242,11 @@ const CartContent = () => {
           throw new Error(`Gagal membuat transaksi untuk ${item.name}`);
         }
         
-        // Update product stock
-        const stockUpdated = await updateProductStock(item.id, item.quantity);
-        
-        if (!stockUpdated) {
-          // If stock update fails, we should rollback this transaction
-          console.error(`Failed to update stock for product ${item.id}`);
-          
-          // Try to cancel the transaction
-          await supabase
-            .from("transactions")
-            .update({ status: "Dibatalkan" })
-            .eq("id", transactionResult.id);
-            
-          throw new Error(`Gagal memperbarui stok untuk ${item.name}`);
-        }
-        
         // Process payment (simulated)
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Update transaction status to "Dibayar"
-        const statusUpdated = await updateTransactionStatus(transactionResult.id, "Dibayar");
+        const statusUpdated = await updateTransactionStatus(transactionResult.id!, "Dibayar");
         
         if (!statusUpdated) {
           console.warn(`Failed to update transaction ${transactionResult.id} status to Dibayar`);

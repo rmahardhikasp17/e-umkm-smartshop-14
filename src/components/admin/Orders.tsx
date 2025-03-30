@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -121,21 +122,7 @@ const Orders = () => {
     setIsUpdatingStatus(true);
     
     try {
-      if (newStatus === "Dibatalkan" && 
-          (selectedOrder.status === "Dibayar" || selectedOrder.status === "Dikemas")) {
-        
-        if (selectedOrder.product_id) {
-          const restoreStock = await supabase.rpc('increment', {
-            product_id: selectedOrder.product_id,
-            quantity: selectedOrder.quantity
-          });
-          
-          if (restoreStock.error) {
-            throw new Error(`Gagal mengembalikan stok: ${restoreStock.error.message}`);
-          }
-        }
-      }
-      
+      // Use the simpler status update with the trigger to handle stock restoration
       const { error } = await supabase
         .from("transactions")
         .update({ status: newStatus })

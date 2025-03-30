@@ -140,6 +140,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrement: {
+        Args: {
+          product_id: string
+          quantity: number
+        }
+        Returns: undefined
+      }
       get_profile_by_id: {
         Args: {
           user_id: string
@@ -150,6 +157,13 @@ export type Database = {
           role: string
           full_name: string
         }[]
+      }
+      increment: {
+        Args: {
+          product_id: string
+          quantity: number
+        }
+        Returns: undefined
       }
       is_admin: {
         Args: Record<PropertyKey, never>
