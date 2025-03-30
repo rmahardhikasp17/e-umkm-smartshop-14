@@ -57,11 +57,18 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
     },
   });
 
+  // Add debug log to verify the email is correctly passed
   console.log("Checkout form initialized with email:", defaultEmail);
+
+  const handleFormSubmit = (data: CheckoutFormValues) => {
+    // Log the form data before submission to verify values
+    console.log("Submitting checkout form with data:", data);
+    onSubmit(data);
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}

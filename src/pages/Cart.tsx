@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/auth";
@@ -60,9 +59,21 @@ const CartContent = () => {
     }, 3000);
   };
 
-  // Validate product stock availability
+  // Validate product stock availability with improved error handling
   const validateProduct = async (productId: string, quantity: number) => {
     try {
+      console.log(`Validating product ${productId} with quantity ${quantity}`);
+      
+      // First check if productId is a valid UUID
+      if (!productId || typeof productId !== 'string' || productId.trim() === '') {
+        console.error("Invalid product ID format:", productId);
+        return { 
+          valid: false, 
+          message: "ID produk tidak valid", 
+          product: null 
+        };
+      }
+      
       const { data, error } = await supabase
         .from("products")
         .select("id, name, stock, price")
@@ -71,12 +82,23 @@ const CartContent = () => {
         
       if (error) {
         console.error("Error validating product:", error);
-        return { valid: false, message: "Produk tidak ditemukan", product: null };
+        return { 
+          valid: false, 
+          message: `Gagal memvalidasi produk: ${error.message}`, 
+          product: null 
+        };
       }
       
       if (!data) {
-        return { valid: false, message: "Produk tidak ditemukan", product: null };
+        console.error("Product not found:", productId);
+        return { 
+          valid: false, 
+          message: "Produk tidak ditemukan", 
+          product: null 
+        };
       }
+      
+      console.log("Product validated:", data);
       
       if (data.stock < quantity) {
         return { 
@@ -88,12 +110,12 @@ const CartContent = () => {
       
       return { valid: true, message: "Produk tersedia", product: data };
     } catch (error) {
-      console.error("Error in validateProduct:", error);
+      console.error("Unexpected error in validateProduct:", error);
       return { valid: false, message: "Terjadi kesalahan saat validasi produk", product: null };
     }
   };
 
-  // Create a new transaction with initial "Menunggu Pembayaran" status
+  // Create a new transaction using the improved decrement function
   const createTransaction = async (
     userId: string,
     productId: string,
@@ -102,13 +124,16 @@ const CartContent = () => {
     shippingInfo: any
   ) => {
     try {
+      console.log(`Creating transaction for product ${productId}, user ${userId}, quantity ${quantity}`);
+      
       // First validate the product availability again before creating the transaction
       const validation = await validateProduct(productId, quantity);
       if (!validation.valid) {
+        console.error("Product validation failed:", validation.message);
         return { success: false, id: null, error: new Error(validation.message) };
       }
       
-      // Create the transaction within a single SQL operation
+      // Create the transaction in a single operation
       const { data, error } = await supabase
         .from("transactions")
         .insert({
@@ -127,7 +152,9 @@ const CartContent = () => {
         return { success: false, id: null, error };
       }
       
-      // Update the product stock using the safe decrement function
+      console.log("Transaction created with ID:", data.id);
+      
+      // Update the product stock using the database decrement function
       const { error: decrementError } = await supabase.rpc('decrement', {
         product_id: productId,
         quantity: quantity
@@ -152,7 +179,7 @@ const CartContent = () => {
     }
   };
 
-  // Update transaction status with simpler implementation
+  // Update transaction status
   const updateTransactionStatus = async (transactionId: string, status: string) => {
     try {
       console.log(`Updating transaction ${transactionId} status to ${status}`);
@@ -208,6 +235,15 @@ const CartContent = () => {
       // Validate all products first
       const invalidProducts = [];
       for (const item of items) {
+        // Ensure the product ID is valid and properly formatted
+        if (!item.id || typeof item.id !== 'string' || item.id.trim() === '') {
+          invalidProducts.push({ 
+            item, 
+            message: `ID produk ${item.name} tidak valid` 
+          });
+          continue;
+        }
+        
         const validation = await validateProduct(item.id, item.quantity);
         if (!validation.valid) {
           invalidProducts.push({ 
@@ -239,7 +275,7 @@ const CartContent = () => {
         );
         
         if (!transactionResult.success) {
-          throw new Error(`Gagal membuat transaksi untuk ${item.name}`);
+          throw new Error(`Gagal membuat transaksi untuk ${item.name}: ${transactionResult.error?.message || 'Unknown error'}`);
         }
         
         // Process payment (simulated)
