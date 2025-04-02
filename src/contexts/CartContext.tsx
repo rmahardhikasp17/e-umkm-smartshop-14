@@ -63,6 +63,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = (product: Product, quantity = 1) => {
     setItems(prevItems => {
+      // Important: frontend components use id, which maps to product_id in the database
       const existingItem = prevItems.find(item => item.id === product.id);
       
       if (existingItem) {

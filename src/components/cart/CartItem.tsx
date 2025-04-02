@@ -18,6 +18,9 @@ const CartItem: React.FC<CartItemProps> = ({
   onUpdateQuantity, 
   isMobile = false 
 }) => {
+  // Note: item.id is used here because the CartContext and frontend components expect id,
+  // even though the database uses product_id
+  
   if (isMobile) {
     return (
       <div className="p-4 border-b last:border-0">

@@ -29,7 +29,7 @@ interface SupabaseProduct {
 
 // Frontend product type for the cart
 interface CartProduct {
-  id: string;
+  id: string; // Keep as id since CartContext uses this format
   name: string;
   price: number;
   image: string;

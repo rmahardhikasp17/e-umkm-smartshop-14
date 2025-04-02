@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -68,7 +67,7 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { totalItems } = useCart();
-
+  
   // Fetch products from Supabase
   const { data: products, isLoading, error } = useQuery({
     queryKey: ["products"],
