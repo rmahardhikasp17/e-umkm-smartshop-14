@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ import Footer from "@/components/Footer";
 
 // Define the product type based on Supabase schema
 interface SupabaseProduct {
-  product_id: string; // Updated from 'id' to match database column
+  product_id: string; 
   name: string;
   price: number;
   stock: number;
@@ -26,7 +27,15 @@ interface SupabaseProduct {
   rating?: number;
 }
 
-// The rest of the ProductDetail component...
+// Frontend product type for the cart
+interface CartProduct {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
+}
+
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
   const [quantity, setQuantity] = useState(1);
@@ -39,7 +48,7 @@ const ProductDetail = () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("product_id", productId) // Updated from 'id' to 'product_id'
+        .eq("product_id", productId)
         .limit(1);
 
       if (error) throw error;
@@ -63,14 +72,15 @@ const ProductDetail = () => {
   // Handler for adding to cart
   const handleAddToCart = () => {
     if (product) {
-      addToCart({
+      const cartProduct: CartProduct = {
         id: product.id,
         name: product.name,
         price: product.price,
         image: product.image,
         quantity
-      });
+      };
       
+      addToCart(cartProduct);
       toast.success(`${product.name} ditambahkan ke keranjang`);
     }
   };

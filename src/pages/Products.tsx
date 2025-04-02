@@ -23,7 +23,7 @@ import { useCart } from "@/contexts/CartContext";
 
 // Define the product type based on Supabase schema
 interface Product {
-  product_id: string; // Updated from 'id' to match database column
+  product_id: string;
   name: string;
   price: number;
   stock: number;
@@ -34,8 +34,20 @@ interface Product {
   rating?: number;
 }
 
+// Frontend product format that matches the ProductCard component expectations
+interface FrontendProduct {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  category: string;
+  stock: number;
+  rating: number;
+}
+
 // Convert Supabase product to our frontend product format
-const mapToProductFormat = (product: Product) => {
+const mapToProductFormat = (product: Product): FrontendProduct => {
   return {
     id: product.product_id, // Map product_id to id for frontend use
     name: product.name,
@@ -363,7 +375,7 @@ const Products = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product, index) => (
                 <ProductCard
-                  key={product.id}
+                  key={product.product_id}
                   product={mapToProductFormat(product)}
                   index={index}
                 />
@@ -387,7 +399,7 @@ const Products = () => {
                 ?.slice(0, 4)
                 .map((product, index) => (
                   <ProductCard
-                    key={product.id}
+                    key={product.product_id}
                     product={mapToProductFormat(product)}
                     index={index}
                   />
