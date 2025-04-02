@@ -51,12 +51,12 @@ type ShippingInfo = {
 };
 
 type Transaction = {
-  id: string;
-  product_id: string | null;
+  transaction_id: string; // Updated column name
+  product_id: string | null; // Updated column name
   quantity: number;
   total_price: number;
   status: string;
-  user_id: string | null;
+  user_id: string | null; // Updated column name
   created_at: string | null;
   shipping_info?: ShippingInfo | null;
   product?: Product;
@@ -126,7 +126,7 @@ const Orders = () => {
       const { error } = await supabase
         .from("transactions")
         .update({ status: newStatus })
-        .eq("id", selectedOrder.id);
+        .eq("transaction_id", selectedOrder.transaction_id); // Updated column name
         
       if (error) {
         throw error;
@@ -151,7 +151,7 @@ const Orders = () => {
 
   const filteredTransactions = transactions?.filter(
     (transaction) =>
-      (transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transaction.transaction_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (transaction.product?.name &&
           transaction.product.name.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (!filterStatus || transaction.status === filterStatus)
@@ -244,8 +244,8 @@ const Orders = () => {
                 <TableBody>
                   {paginatedTransactions.length > 0 ? (
                     paginatedTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">{transaction.id.substring(0, 8)}</TableCell>
+                      <TableRow key={transaction.transaction_id}>
+                        <TableCell className="font-medium">{transaction.transaction_id.substring(0, 8)}</TableCell>
                         <TableCell>{transaction.product?.name || "Unknown Product"}</TableCell>
                         <TableCell>{transaction.shipping_info?.name || transaction.user?.email || "Unknown User"}</TableCell>
                         <TableCell>{formatPrice(transaction.total_price)}</TableCell>
@@ -326,7 +326,7 @@ const Orders = () => {
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Detail Pesanan #{selectedOrder?.id.substring(0, 8)}</DialogTitle>
+            <DialogTitle>Detail Pesanan #{selectedOrder?.transaction_id.substring(0, 8)}</DialogTitle>
           </DialogHeader>
           
           {selectedOrder && (

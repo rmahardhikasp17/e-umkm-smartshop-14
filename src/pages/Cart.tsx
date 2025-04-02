@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/auth";
@@ -76,8 +77,8 @@ const CartContent = () => {
       
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, stock, price")
-        .eq("id", productId)
+        .select("product_id, name, stock, price") // Updated column names
+        .eq("product_id", productId) // Updated column name
         .single();
         
       if (error) {
@@ -144,7 +145,7 @@ const CartContent = () => {
           status: "Menunggu Pembayaran",
           shipping_info: shippingInfo
         })
-        .select('id')
+        .select('transaction_id') // Updated column name
         .single();
         
       if (error) {
@@ -152,7 +153,7 @@ const CartContent = () => {
         return { success: false, id: null, error };
       }
       
-      console.log("Transaction created with ID:", data.id);
+      console.log("Transaction created with ID:", data.transaction_id);
       
       // Update the product stock using the database decrement function
       const { error: decrementError } = await supabase.rpc('decrement', {
@@ -167,12 +168,12 @@ const CartContent = () => {
         await supabase
           .from("transactions")
           .update({ status: "Dibatalkan" })
-          .eq("id", data.id);
+          .eq("transaction_id", data.transaction_id); // Updated column name
           
         return { success: false, id: null, error: decrementError };
       }
       
-      return { success: true, id: data.id, error: null };
+      return { success: true, id: data.transaction_id, error: null };
     } catch (error) {
       console.error("Unexpected error creating transaction:", error);
       return { success: false, id: null, error };
@@ -187,7 +188,7 @@ const CartContent = () => {
       const { error } = await supabase
         .from("transactions")
         .update({ status })
-        .eq("id", transactionId);
+        .eq("transaction_id", transactionId); // Updated column name
         
       if (error) {
         console.error("Error updating transaction status:", error);

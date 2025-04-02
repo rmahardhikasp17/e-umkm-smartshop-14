@@ -13,28 +13,28 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
-          id: string
           image_url: string | null
           name: string
           price: number
+          product_id: string
           stock: number
         }
         Insert: {
           created_at?: string | null
           description?: string | null
-          id?: string
           image_url?: string | null
           name: string
           price: number
+          product_id?: string
           stock: number
         }
         Update: {
           created_at?: string | null
           description?: string | null
-          id?: string
           image_url?: string | null
           name?: string
           price?: number
+          product_id?: string
           stock?: number
         }
         Relationships: []
@@ -66,32 +66,32 @@ export type Database = {
       transactions: {
         Row: {
           created_at: string | null
-          id: string
           product_id: string | null
           quantity: number
           shipping_info: Json | null
           status: string
           total_price: number
+          transaction_id: string
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
-          id?: string
           product_id?: string | null
           quantity: number
           shipping_info?: Json | null
           status: string
           total_price: number
+          transaction_id?: string
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
-          id?: string
           product_id?: string | null
           quantity?: number
           shipping_info?: Json | null
           status?: string
           total_price?: number
+          transaction_id?: string
           user_id?: string | null
         }
         Relationships: [
@@ -100,14 +100,14 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["id"]
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -115,23 +115,23 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
-          id: string
           password_hash: string
           role: string
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           email: string
-          id?: string
           password_hash: string
           role: string
+          user_id?: string
         }
         Update: {
           created_at?: string | null
           email?: string
-          id?: string
           password_hash?: string
           role?: string
+          user_id?: string
         }
         Relationships: []
       }

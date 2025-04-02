@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -30,8 +31,8 @@ type Product = {
 };
 
 type Transaction = {
-  id: string;
-  product_id: string | null;
+  transaction_id: string; // Updated column name
+  product_id: string | null; // Updated column name
   quantity: number;
   total_price: number;
   status: string;
@@ -40,7 +41,7 @@ type Transaction = {
 };
 
 type User = {
-  id: string;
+  user_id: string; // Updated column name
   email: string;
   role: string;
   created_at: string | null;
@@ -80,7 +81,7 @@ const Customers = () => {
               *,
               product:products (name)
             `)
-            .eq("user_id", user.id);
+            .eq("user_id", user.user_id); // Updated column name
 
           if (transactionError) {
             console.error("Error fetching transactions:", transactionError);
@@ -131,7 +132,7 @@ const Customers = () => {
   const filteredUsers = users?.filter(
     (user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.id.toLowerCase().includes(searchTerm.toLowerCase())
+      user.user_id.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   // Paginate users
@@ -200,7 +201,7 @@ const Customers = () => {
                 <TableBody>
                   {paginatedUsers.length > 0 ? (
                     paginatedUsers.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow key={user.user_id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -210,9 +211,9 @@ const Customers = () => {
                           </div>
                         </TableCell>
                         <TableCell className="font-mono text-xs flex items-center gap-1.5">
-                          {user.id.substring(0, 8)}...
+                          {user.user_id.substring(0, 8)}...
                           <button
-                            onClick={() => copyToClipboard(user.id)}
+                            onClick={() => copyToClipboard(user.user_id)}
                             className="text-muted-foreground hover:text-foreground"
                           >
                             <Clipboard className="h-3.5 w-3.5" />
@@ -301,9 +302,9 @@ const Customers = () => {
                 <div>
                   <h3 className="font-medium text-lg">{selectedUser.email}</h3>
                   <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    ID: {selectedUser.id}
+                    ID: {selectedUser.user_id}
                     <button
-                      onClick={() => copyToClipboard(selectedUser.id)}
+                      onClick={() => copyToClipboard(selectedUser.user_id)}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <Clipboard className="h-3.5 w-3.5" />
@@ -349,9 +350,9 @@ const Customers = () => {
                     </TableHeader>
                     <TableBody>
                       {selectedUser.transactions.map((transaction) => (
-                        <TableRow key={transaction.id}>
+                        <TableRow key={transaction.transaction_id}>
                           <TableCell className="font-mono text-xs">
-                            {transaction.id.substring(0, 8)}...
+                            {transaction.transaction_id.substring(0, 8)}...
                           </TableCell>
                           <TableCell>{transaction.product?.name || "Unknown Product"}</TableCell>
                           <TableCell>{formatPrice(transaction.total_price)}</TableCell>
