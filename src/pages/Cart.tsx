@@ -77,8 +77,8 @@ const CartContent = () => {
       
       const { data, error } = await supabase
         .from("products")
-        .select("product_id, name, stock, price") // Updated column names
-        .eq("product_id", productId) // Updated column name
+        .select("product_id, name, stock, price")
+        .eq("product_id", productId)
         .single();
         
       if (error) {
@@ -145,7 +145,7 @@ const CartContent = () => {
           status: "Menunggu Pembayaran",
           shipping_info: shippingInfo
         })
-        .select('transaction_id') // Updated column name
+        .select('transaction_id')
         .single();
         
       if (error) {
@@ -168,7 +168,7 @@ const CartContent = () => {
         await supabase
           .from("transactions")
           .update({ status: "Dibatalkan" })
-          .eq("transaction_id", data.transaction_id); // Updated column name
+          .eq("transaction_id", data.transaction_id);
           
         return { success: false, id: null, error: decrementError };
       }
@@ -188,7 +188,7 @@ const CartContent = () => {
       const { error } = await supabase
         .from("transactions")
         .update({ status })
-        .eq("transaction_id", transactionId); // Updated column name
+        .eq("transaction_id", transactionId);
         
       if (error) {
         console.error("Error updating transaction status:", error);

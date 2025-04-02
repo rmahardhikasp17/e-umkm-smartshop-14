@@ -51,12 +51,12 @@ type ShippingInfo = {
 };
 
 type Transaction = {
-  transaction_id: string; // Updated column name
-  product_id: string | null; // Updated column name
+  transaction_id: string;
+  product_id: string | null;
   quantity: number;
   total_price: number;
   status: string;
-  user_id: string | null; // Updated column name
+  user_id: string | null;
   created_at: string | null;
   shipping_info?: ShippingInfo | null;
   product?: Product;
@@ -107,6 +107,7 @@ const Orders = () => {
         throw new Error(error.message);
       }
 
+      // Cast the data to the correct type since we know the structure
       return data as Transaction[];
     },
   });
@@ -126,7 +127,7 @@ const Orders = () => {
       const { error } = await supabase
         .from("transactions")
         .update({ status: newStatus })
-        .eq("transaction_id", selectedOrder.transaction_id); // Updated column name
+        .eq("transaction_id", selectedOrder.transaction_id);
         
       if (error) {
         throw error;
