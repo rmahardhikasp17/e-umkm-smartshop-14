@@ -72,15 +72,18 @@ const ProductDetail = () => {
   // Handler for adding to cart
   const handleAddToCart = () => {
     if (product) {
-      const cartProduct: CartProduct = {
+      // Create a product object that matches what is expected by the addToCart function
+      addToCart({
         id: product.id,
         name: product.name,
         price: product.price,
         image: product.image,
-        quantity
-      };
+        description: product.description,
+        category: product.category,
+        stock: product.stock,
+        rating: product.rating
+      }, quantity);
       
-      addToCart(cartProduct);
       toast.success(`${product.name} ditambahkan ke keranjang`);
     }
   };
@@ -187,8 +190,8 @@ const ProductDetail = () => {
             className="bg-white rounded-xl overflow-hidden shadow-subtle"
           >
             <img 
-              src={product.image} 
-              alt={product.name} 
+              src={product?.image} 
+              alt={product?.name} 
               className="w-full h-auto object-cover aspect-square"
             />
           </motion.div>
@@ -200,7 +203,7 @@ const ProductDetail = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="space-y-4"
           >
-            <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">{product?.name}</h1>
             
             <div className="flex items-center">
               <div className="flex mr-2">
@@ -209,7 +212,7 @@ const ProductDetail = () => {
                     key={star} 
                     size={16} 
                     className={`${
-                      star <= Math.floor(product.rating) 
+                      product && star <= Math.floor(product.rating) 
                         ? "text-yellow-400 fill-yellow-400" 
                         : "text-gray-300"
                     } mr-0.5`} 
@@ -217,29 +220,29 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">
-                {product.rating.toFixed(1)} / 5.0
+                {product?.rating.toFixed(1)} / 5.0
               </span>
             </div>
             
             <p className="text-2xl font-bold text-primary">
-              {formatPrice(product.price)}
+              {product && formatPrice(product.price)}
             </p>
             
             <div className="border-t border-b py-4">
               <p className="text-muted-foreground whitespace-pre-line">
-                {product.description}
+                {product?.description}
               </p>
             </div>
             
             <div className="flex items-center">
               <span className="text-sm font-medium mr-2">Kategori:</span>
-              <span className="text-sm text-muted-foreground">{product.category}</span>
+              <span className="text-sm text-muted-foreground">{product?.category}</span>
             </div>
             
             <div className="flex items-center">
               <span className="text-sm font-medium mr-2">Stok:</span>
-              <span className={`text-sm ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {product.stock > 0 ? `${product.stock} tersedia` : 'Habis'}
+              <span className={`text-sm ${product && product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {product ? product.stock > 0 ? `${product.stock} tersedia` : 'Habis' : ''}
               </span>
             </div>
             
@@ -260,7 +263,7 @@ const ProductDetail = () => {
                   </span>
                   <button 
                     onClick={incrementQuantity}
-                    disabled={product.stock <= quantity}
+                    disabled={product ? product.stock <= quantity : true}
                     className="px-3 py-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
                   >
                     <Plus size={16} />
@@ -270,12 +273,12 @@ const ProductDetail = () => {
               
               <Button 
                 onClick={handleAddToCart} 
-                disabled={product.stock <= 0}
+                disabled={!product || product.stock <= 0}
                 className="w-full"
                 size="lg"
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                {product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis'}
+                {product ? product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis' : 'Memuat...'}
               </Button>
             </div>
           </motion.div>
@@ -286,7 +289,7 @@ const ProductDetail = () => {
           <h2 className="text-xl font-bold mb-4">Detail Produk</h2>
           <div className="bg-white p-6 rounded-xl shadow-subtle">
             <p className="text-muted-foreground whitespace-pre-line">
-              {product.description || "Tidak ada deskripsi detail untuk produk ini."}
+              {product?.description || "Tidak ada deskripsi detail untuk produk ini."}
             </p>
           </div>
         </div>
