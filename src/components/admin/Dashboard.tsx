@@ -21,12 +21,12 @@ type User = {
 };
 
 type Transaction = {
-  id: string;
-  product_id: string | null;
+  transaction_id: string; // Updated from 'id' to match database column
+  product_id: string | null; // Updated from 'product_id'
   quantity: number;
   total_price: number;
   status: string;
-  user_id: string | null;
+  user_id: string | null; // Updated from 'user_id'
   created_at: string | null;
   product?: Product;
   user?: User;
@@ -174,13 +174,13 @@ const Dashboard = () => {
     const usersWithTransactions = new Set();
     const newCustomers = users ? 
       users.filter(user => {
-        const firstTransaction = transactions.find(t => t.user_id === user.id);
+        const firstTransaction = transactions.find(t => t.user_id === user.user_id); // Updated from user.id to user.user_id
         return firstTransaction && new Date(firstTransaction.created_at as string) >= thirtyDaysAgo;
       }).length : 0;
     
     const previousMonthNewCustomers = users ? 
       users.filter(user => {
-        const firstTransaction = transactions.find(t => t.user_id === user.id);
+        const firstTransaction = transactions.find(t => t.user_id === user.user_id); // Updated from user.id to user.user_id
         return firstTransaction && 
           new Date(firstTransaction.created_at as string) >= sixtyDaysAgo && 
           new Date(firstTransaction.created_at as string) < thirtyDaysAgo;
@@ -465,8 +465,8 @@ const Dashboard = () => {
                 }
                 
                 return (
-                  <tr key={order.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="py-3 px-4 text-sm font-medium">{`ORD-${order.id.substring(0, 4)}`}</td>
+                  <tr key={order.transaction_id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="py-3 px-4 text-sm font-medium">{`ORD-${order.transaction_id.substring(0, 4)}`}</td>
                     <td className="py-3 px-4 text-sm">{order.user?.email || "Pelanggan"}</td>
                     <td className="py-3 px-4 text-sm">{order.product?.name || "Produk"}</td>
                     <td className="py-3 px-4 text-sm">{formatPrice(order.total_price)}</td>

@@ -21,7 +21,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 
 // Define product type based on Supabase table
 type Product = {
-  id: string;
+  product_id: string; // Updated from 'id' to match database column
   name: string;
   description: string | null;
   price: number;
@@ -30,7 +30,7 @@ type Product = {
   created_at: string | null;
 };
 
-type FormProduct = Omit<Product, 'id' | 'created_at'>;
+type FormProduct = Omit<Product, 'product_id' | 'created_at'>;
 
 const initialFormState: FormProduct = {
   name: "",
@@ -98,7 +98,7 @@ const Products = () => {
       const { data, error } = await supabase
         .from("products")
         .update(product)
-        .eq("id", id)
+        .eq("product_id", id) // Updated from 'id' to 'product_id'
         .select();
         
       if (error) throw new Error(error.message);
@@ -121,7 +121,7 @@ const Products = () => {
       const { error } = await supabase
         .from("products")
         .delete()
-        .eq("id", id);
+        .eq("product_id", id); // Updated from 'id' to 'product_id'
         
       if (error) throw new Error(error.message);
     },
@@ -243,7 +243,7 @@ const Products = () => {
                 <TableBody>
                   {paginatedProducts.length > 0 ? (
                     paginatedProducts.map((product) => (
-                      <TableRow key={product.id}>
+                      <TableRow key={product.product_id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center overflow-hidden">
@@ -515,7 +515,7 @@ const Products = () => {
             </Button>
             <Button 
               onClick={() => currentProduct && updateProductMutation.mutate({
-                id: currentProduct.id,
+                id: currentProduct.product_id, // Updated from currentProduct.id to currentProduct.product_id
                 product: formData
               })}
               disabled={!formData.name || formData.price <= 0}
@@ -564,7 +564,7 @@ const Products = () => {
             </Button>
             <Button 
               variant="destructive" 
-              onClick={() => currentProduct && deleteProductMutation.mutate(currentProduct.id)}
+              onClick={() => currentProduct && deleteProductMutation.mutate(currentProduct.product_id)} // Updated from currentProduct.id to currentProduct.product_id
             >
               <Trash2 className="mr-2 h-4 w-4" /> Hapus Produk
             </Button>

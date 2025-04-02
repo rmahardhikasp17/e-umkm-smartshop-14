@@ -23,7 +23,7 @@ import { useCart } from "@/contexts/CartContext";
 
 // Define the product type based on Supabase schema
 interface Product {
-  id: string;
+  product_id: string; // Updated from 'id' to match database column
   name: string;
   price: number;
   stock: number;
@@ -37,7 +37,7 @@ interface Product {
 // Convert Supabase product to our frontend product format
 const mapToProductFormat = (product: Product) => {
   return {
-    id: product.id,
+    id: product.product_id, // Map product_id to id for frontend use
     name: product.name,
     price: product.price,
     description: product.description || "",

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { dummyProducts, categories, Product } from "../utils/data";
 
 // Interface for Supabase product data
 interface SupabaseProduct {
-  id: string;
+  product_id: string;
   name: string;
   price: number;
   stock: number;
@@ -29,7 +28,7 @@ interface SupabaseProduct {
 // Convert Supabase product to our frontend product format
 const mapToProductFormat = (product: SupabaseProduct): Product => {
   return {
-    id: product.id,
+    id: product.product_id,
     name: product.name,
     price: product.price,
     description: product.description || "",
