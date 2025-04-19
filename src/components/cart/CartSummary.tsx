@@ -40,7 +40,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({
             name: item.name,
             price: item.price,
             quantity: item.quantity,
-            image: item.image_url
+            image: item.image // Use image property instead of image_url
           })),
           email: user?.email || '',
           shippingInfo
