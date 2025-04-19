@@ -21,24 +21,38 @@ serve(async (req) => {
       throw new Error("No items in cart")
     }
     
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    // Check if Stripe key is available
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      console.error("Missing Stripe secret key")
+      throw new Error("Payment configuration error")
+    }
+    
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     })
 
     console.log(`Creating checkout for ${items.length} items, email: ${email}`)
 
     // Create line items for Stripe
-    const lineItems = items.map((item: any) => ({
-      price_data: {
-        currency: "idr",
-        product_data: {
-          name: item.name,
-          images: item.image ? [item.image] : undefined,
+    const lineItems = items.map((item: any) => {
+      // Ensure price is an integer representing smallest currency unit (e.g., cents)
+      const unitAmount = Math.round(item.price)
+      
+      console.log(`Processing item: ${item.name}, price: ${unitAmount}, quantity: ${item.quantity}`)
+      
+      return {
+        price_data: {
+          currency: "idr",
+          product_data: {
+            name: item.name,
+            images: item.image ? [item.image] : undefined,
+          },
+          unit_amount: unitAmount, // Price in smallest currency unit
         },
-        unit_amount: item.price, // Price in cents
-      },
-      quantity: item.quantity,
-    }))
+        quantity: item.quantity,
+      }
+    })
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({

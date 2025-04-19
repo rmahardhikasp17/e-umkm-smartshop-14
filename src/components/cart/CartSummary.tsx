@@ -26,12 +26,15 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   const handleStripeCheckout = async () => {
     try {
       setIsProcessingPayment(true);
+      toast.info("Mempersiapkan checkout...");
       
       // Prepare shipping info for Stripe
       const shippingInfo = {
         email: user?.email || '',
         name: user?.email?.split('@')[0] || 'Guest',
       };
+      
+      console.log("Invoking create-payment with items:", items.length);
       
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { 
@@ -47,12 +50,18 @@ const CartSummary: React.FC<CartSummaryProps> = ({
         },
       });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("Payment function error:", error);
+        throw new Error(error.message);
+      }
       
       if (!data?.url) {
+        console.error("No checkout URL received:", data);
         throw new Error('No checkout URL received');
       }
 
+      console.log("Redirecting to Stripe checkout:", data.url);
+      
       // Redirect to Stripe Checkout
       window.location.href = data.url;
     } catch (error) {
