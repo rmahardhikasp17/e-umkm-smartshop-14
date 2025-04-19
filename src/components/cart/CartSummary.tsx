@@ -19,31 +19,47 @@ const CartSummary: React.FC<CartSummaryProps> = ({
   onCheckout, 
   onClearCart 
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { items } = useCart();
   const { user } = useAuth();
 
-  const handleCheckout = async () => {
+  const handleStripeCheckout = async () => {
     try {
-      setIsProcessing(true);
+      setIsProcessingPayment(true);
       
-      const { data: { url }, error } = await supabase.functions.invoke('create-payment', {
+      // Prepare shipping info for Stripe
+      const shippingInfo = {
+        email: user?.email || '',
+        name: user?.email?.split('@')[0] || 'Guest',
+      };
+      
+      const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { 
-          items,
+          items: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image_url
+          })),
           email: user?.email || '',
+          shippingInfo
         },
       });
 
-      if (error) throw error;
-      if (!url) throw new Error('No checkout URL received');
+      if (error) throw new Error(error.message);
+      
+      if (!data?.url) {
+        throw new Error('No checkout URL received');
+      }
 
       // Redirect to Stripe Checkout
-      window.location.href = url;
+      window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       toast.error('Gagal memproses pembayaran. Silakan coba lagi.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -72,18 +88,26 @@ const CartSummary: React.FC<CartSummaryProps> = ({
       <CardFooter className="flex-col space-y-2">
         <Button 
           className="w-full" 
-          onClick={handleCheckout}
-          disabled={isProcessing}
+          onClick={handleStripeCheckout}
+          disabled={isProcessingPayment || items.length === 0}
         >
-          {isProcessing ? "Memproses..." : "Checkout"}
+          {isProcessingPayment ? "Memproses..." : "Bayar dengan Stripe"}
         </Button>
         <Button 
           variant="outline" 
           className="w-full"
           onClick={onClearCart}
-          disabled={isProcessing}
+          disabled={isProcessingPayment || items.length === 0}
         >
           Kosongkan Keranjang
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={onCheckout}
+          disabled={isProcessingPayment || items.length === 0}
+        >
+          Checkout Reguler
         </Button>
       </CardFooter>
     </Card>

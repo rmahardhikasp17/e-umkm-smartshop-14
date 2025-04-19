@@ -14,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Processing payment request...")
     const { items, email, shippingInfo } = await req.json()
     
     if (!items?.length) {
@@ -23,6 +24,8 @@ serve(async (req) => {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     })
+
+    console.log(`Creating checkout for ${items.length} items, email: ${email}`)
 
     // Create line items for Stripe
     const lineItems = items.map((item: any) => ({
@@ -50,6 +53,8 @@ serve(async (req) => {
       },
     })
 
+    console.log(`Checkout session created: ${session.id}, URL: ${session.url}`)
+
     return new Response(
       JSON.stringify({ url: session.url }),
       {
@@ -58,6 +63,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error(`Error creating checkout session: ${error.message}`)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
