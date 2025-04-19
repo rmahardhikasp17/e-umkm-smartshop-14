@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CreateAdmin from "./pages/CreateAdmin";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const AppRoutes = () => (
         </ProtectedRoute>
       } 
     />
+    <Route path="/payment-success" element={<PaymentSuccess />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
